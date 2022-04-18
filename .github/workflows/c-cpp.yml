@@ -9,8 +9,10 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest, windows-latest
 
+    needs: SDL2
+    
     steps:
     - uses: actions/checkout@v3
     - name: configure
