@@ -11,7 +11,7 @@ jobs:
 
     runs-on: ubuntu-latest, windows-latest
 
-    needs: SDL2
+#    needs: SDL2
     
     steps:
     - uses: actions/checkout@v3
