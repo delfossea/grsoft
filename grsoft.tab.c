@@ -117,6 +117,9 @@ int b1,b2,e1,e2;
 SDL_Window* pWindow = NULL;
 SDL_Renderer* renderer = NULL;
 SDL_bool done;
+SDL_Rect pos;
+SDL_Surface * temp;
+SDL_Texture * sprite;
 int hgr=0;
 void yyerror(char *s);
 int basic2c(FILE *fp);
@@ -124,7 +127,7 @@ int yylex();
 char oper[4];
 int infor=0;
 
-#line 128 "grsoft.tab.c"
+#line 131 "grsoft.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -165,94 +168,99 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    SAVE = 258,                    /* SAVE  */
-    GET = 259,                     /* GET  */
-    PEEK = 260,                    /* PEEK  */
-    POKE = 261,                    /* POKE  */
-    RUN = 262,                     /* RUN  */
-    RND = 263,                     /* RND  */
-    PRINT = 264,                   /* PRINT  */
-    IDENTIFIER = 265,              /* IDENTIFIER  */
-    PLUS = 266,                    /* PLUS  */
-    MINUS = 267,                   /* MINUS  */
-    ASTERISK = 268,                /* ASTERISK  */
-    DIVIDE = 269,                  /* DIVIDE  */
-    NUMBER = 270,                  /* NUMBER  */
-    LIST = 271,                    /* LIST  */
-    INPUT = 272,                   /* INPUT  */
-    LET = 273,                     /* LET  */
-    SQR = 274,                     /* SQR  */
-    SIN = 275,                     /* SIN  */
-    COS = 276,                     /* COS  */
-    TAN = 277,                     /* TAN  */
-    EXP = 278,                     /* EXP  */
-    DIM = 279,                     /* DIM  */
-    ABS = 280,                     /* ABS  */
-    OR = 281,                      /* OR  */
-    AND = 282,                     /* AND  */
-    ASC = 283,                     /* ASC  */
-    REM = 284,                     /* REM  */
-    QUOTE = 285,                   /* QUOTE  */
-    EQUAL = 286,                   /* EQUAL  */
-    PO = 287,                      /* PO  */
-    PF = 288,                      /* PF  */
-    CO = 289,                      /* CO  */
-    CF = 290,                      /* CF  */
-    DP = 291,                      /* DP  */
-    PG = 292,                      /* PG  */
-    PP = 293,                      /* PP  */
-    DIFF = 294,                    /* DIFF  */
-    DOT = 295,                     /* DOT  */
-    COMMA = 296,                   /* COMMA  */
-    SEMICOLOMN = 297,              /* SEMICOLOMN  */
-    CR = 298,                      /* CR  */
-    RANDOMIZE = 299,               /* RANDOMIZE  */
-    MOD = 300,                     /* MOD  */
-    CHARS = 301,                   /* CHARS  */
-    FLOAT = 302,                   /* FLOAT  */
-    SYSTEM = 303,                  /* SYSTEM  */
-    DUMP = 304,                    /* DUMP  */
-    CLEAR = 305,                   /* CLEAR  */
-    COLOR = 306,                   /* COLOR  */
-    DRAW = 307,                    /* DRAW  */
-    IF = 308,                      /* IF  */
-    THEN = 309,                    /* THEN  */
-    ELSE = 310,                    /* ELSE  */
-    FOR = 311,                     /* FOR  */
-    NEXT = 312,                    /* NEXT  */
-    STEP = 313,                    /* STEP  */
-    TO = 314,                      /* TO  */
-    DEBUG = 315,                   /* DEBUG  */
-    GOTO = 316,                    /* GOTO  */
-    GOSUB = 317,                   /* GOSUB  */
-    RETURN = 318,                  /* RETURN  */
-    NEW = 319,                     /* NEW  */
-    TRACE = 320,                   /* TRACE  */
-    ON = 321,                      /* ON  */
-    OFF = 322,                     /* OFF  */
-    TEXT = 323,                    /* TEXT  */
-    HTAB = 324,                    /* HTAB  */
-    VTAB = 325,                    /* VTAB  */
-    HOME = 326,                    /* HOME  */
-    GR = 327,                      /* GR  */
-    PLOT = 328,                    /* PLOT  */
-    HGR = 329,                     /* HGR  */
-    HPLOT = 330,                   /* HPLOT  */
-    END = 331,                     /* END  */
-    NOT = 332,                     /* NOT  */
-    READ = 333,                    /* READ  */
-    DATA = 334,                    /* DATA  */
-    VLIN = 335,                    /* VLIN  */
-    HLIN = 336,                    /* HLIN  */
-    MID = 337,                     /* MID  */
-    LEFT = 338,                    /* LEFT  */
-    RIGHT = 339,                   /* RIGHT  */
-    LEN = 340,                     /* LEN  */
-    STRING = 341,                  /* STRING  */
-    AMPER = 342,                   /* AMPER  */
-    AT = 343,                      /* AT  */
-    CHR = 344,                     /* CHR  */
-    INT = 345                      /* INT  */
+    PR = 258,                      /* PR  */
+    STR = 259,                     /* STR  */
+    SAVE = 260,                    /* SAVE  */
+    GET = 261,                     /* GET  */
+    PEEK = 262,                    /* PEEK  */
+    POKE = 263,                    /* POKE  */
+    RUN = 264,                     /* RUN  */
+    RND = 265,                     /* RND  */
+    PRINT = 266,                   /* PRINT  */
+    IDENTIFIER = 267,              /* IDENTIFIER  */
+    PLUS = 268,                    /* PLUS  */
+    MINUS = 269,                   /* MINUS  */
+    ASTERISK = 270,                /* ASTERISK  */
+    DIVIDE = 271,                  /* DIVIDE  */
+    NUMBER = 272,                  /* NUMBER  */
+    LIST = 273,                    /* LIST  */
+    INPUT = 274,                   /* INPUT  */
+    LET = 275,                     /* LET  */
+    SQR = 276,                     /* SQR  */
+    SIN = 277,                     /* SIN  */
+    COS = 278,                     /* COS  */
+    TAN = 279,                     /* TAN  */
+    EXP = 280,                     /* EXP  */
+    DIM = 281,                     /* DIM  */
+    ABS = 282,                     /* ABS  */
+    OR = 283,                      /* OR  */
+    AND = 284,                     /* AND  */
+    ASC = 285,                     /* ASC  */
+    REM = 286,                     /* REM  */
+    QUOTE = 287,                   /* QUOTE  */
+    EQUAL = 288,                   /* EQUAL  */
+    PO = 289,                      /* PO  */
+    PF = 290,                      /* PF  */
+    CO = 291,                      /* CO  */
+    CF = 292,                      /* CF  */
+    DP = 293,                      /* DP  */
+    PG = 294,                      /* PG  */
+    PP = 295,                      /* PP  */
+    PE = 296,                      /* PE  */
+    GE = 297,                      /* GE  */
+    DIFF = 298,                    /* DIFF  */
+    DOT = 299,                     /* DOT  */
+    COMMA = 300,                   /* COMMA  */
+    SEMICOLOMN = 301,              /* SEMICOLOMN  */
+    CR = 302,                      /* CR  */
+    RANDOMIZE = 303,               /* RANDOMIZE  */
+    MOD = 304,                     /* MOD  */
+    CHARS = 305,                   /* CHARS  */
+    FLOAT = 306,                   /* FLOAT  */
+    SYSTEM = 307,                  /* SYSTEM  */
+    DUMP = 308,                    /* DUMP  */
+    CLEAR = 309,                   /* CLEAR  */
+    COLOR = 310,                   /* COLOR  */
+    DRAW = 311,                    /* DRAW  */
+    IF = 312,                      /* IF  */
+    THEN = 313,                    /* THEN  */
+    ELSE = 314,                    /* ELSE  */
+    FOR = 315,                     /* FOR  */
+    NEXT = 316,                    /* NEXT  */
+    STEP = 317,                    /* STEP  */
+    TO = 318,                      /* TO  */
+    DEBUG = 319,                   /* DEBUG  */
+    GOTO = 320,                    /* GOTO  */
+    GOSUB = 321,                   /* GOSUB  */
+    RETURN = 322,                  /* RETURN  */
+    NEW = 323,                     /* NEW  */
+    TRACE = 324,                   /* TRACE  */
+    NOTRACE = 325,                 /* NOTRACE  */
+    ON = 326,                      /* ON  */
+    OFF = 327,                     /* OFF  */
+    TEXT = 328,                    /* TEXT  */
+    HTAB = 329,                    /* HTAB  */
+    VTAB = 330,                    /* VTAB  */
+    HOME = 331,                    /* HOME  */
+    GR = 332,                      /* GR  */
+    PLOT = 333,                    /* PLOT  */
+    HGR = 334,                     /* HGR  */
+    HPLOT = 335,                   /* HPLOT  */
+    END = 336,                     /* END  */
+    NOT = 337,                     /* NOT  */
+    READ = 338,                    /* READ  */
+    DATA = 339,                    /* DATA  */
+    VLIN = 340,                    /* VLIN  */
+    HLIN = 341,                    /* HLIN  */
+    MID = 342,                     /* MID  */
+    LEFT = 343,                    /* LEFT  */
+    RIGHT = 344,                   /* RIGHT  */
+    LEN = 345,                     /* LEN  */
+    STRING = 346,                  /* STRING  */
+    AMPER = 347,                   /* AMPER  */
+    AT = 348,                      /* AT  */
+    CHR = 349,                     /* CHR  */
+    INT = 350                      /* INT  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -277,146 +285,163 @@ enum yysymbol_kind_t
   YYSYMBOL_YYEOF = 0,                      /* "end of file"  */
   YYSYMBOL_YYerror = 1,                    /* error  */
   YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
-  YYSYMBOL_SAVE = 3,                       /* SAVE  */
-  YYSYMBOL_GET = 4,                        /* GET  */
-  YYSYMBOL_PEEK = 5,                       /* PEEK  */
-  YYSYMBOL_POKE = 6,                       /* POKE  */
-  YYSYMBOL_RUN = 7,                        /* RUN  */
-  YYSYMBOL_RND = 8,                        /* RND  */
-  YYSYMBOL_PRINT = 9,                      /* PRINT  */
-  YYSYMBOL_IDENTIFIER = 10,                /* IDENTIFIER  */
-  YYSYMBOL_PLUS = 11,                      /* PLUS  */
-  YYSYMBOL_MINUS = 12,                     /* MINUS  */
-  YYSYMBOL_ASTERISK = 13,                  /* ASTERISK  */
-  YYSYMBOL_DIVIDE = 14,                    /* DIVIDE  */
-  YYSYMBOL_NUMBER = 15,                    /* NUMBER  */
-  YYSYMBOL_LIST = 16,                      /* LIST  */
-  YYSYMBOL_INPUT = 17,                     /* INPUT  */
-  YYSYMBOL_LET = 18,                       /* LET  */
-  YYSYMBOL_SQR = 19,                       /* SQR  */
-  YYSYMBOL_SIN = 20,                       /* SIN  */
-  YYSYMBOL_COS = 21,                       /* COS  */
-  YYSYMBOL_TAN = 22,                       /* TAN  */
-  YYSYMBOL_EXP = 23,                       /* EXP  */
-  YYSYMBOL_DIM = 24,                       /* DIM  */
-  YYSYMBOL_ABS = 25,                       /* ABS  */
-  YYSYMBOL_OR = 26,                        /* OR  */
-  YYSYMBOL_AND = 27,                       /* AND  */
-  YYSYMBOL_ASC = 28,                       /* ASC  */
-  YYSYMBOL_REM = 29,                       /* REM  */
-  YYSYMBOL_QUOTE = 30,                     /* QUOTE  */
-  YYSYMBOL_EQUAL = 31,                     /* EQUAL  */
-  YYSYMBOL_PO = 32,                        /* PO  */
-  YYSYMBOL_PF = 33,                        /* PF  */
-  YYSYMBOL_CO = 34,                        /* CO  */
-  YYSYMBOL_CF = 35,                        /* CF  */
-  YYSYMBOL_DP = 36,                        /* DP  */
-  YYSYMBOL_PG = 37,                        /* PG  */
-  YYSYMBOL_PP = 38,                        /* PP  */
-  YYSYMBOL_DIFF = 39,                      /* DIFF  */
-  YYSYMBOL_DOT = 40,                       /* DOT  */
-  YYSYMBOL_COMMA = 41,                     /* COMMA  */
-  YYSYMBOL_SEMICOLOMN = 42,                /* SEMICOLOMN  */
-  YYSYMBOL_CR = 43,                        /* CR  */
-  YYSYMBOL_RANDOMIZE = 44,                 /* RANDOMIZE  */
-  YYSYMBOL_MOD = 45,                       /* MOD  */
-  YYSYMBOL_CHARS = 46,                     /* CHARS  */
-  YYSYMBOL_FLOAT = 47,                     /* FLOAT  */
-  YYSYMBOL_SYSTEM = 48,                    /* SYSTEM  */
-  YYSYMBOL_DUMP = 49,                      /* DUMP  */
-  YYSYMBOL_CLEAR = 50,                     /* CLEAR  */
-  YYSYMBOL_COLOR = 51,                     /* COLOR  */
-  YYSYMBOL_DRAW = 52,                      /* DRAW  */
-  YYSYMBOL_IF = 53,                        /* IF  */
-  YYSYMBOL_THEN = 54,                      /* THEN  */
-  YYSYMBOL_ELSE = 55,                      /* ELSE  */
-  YYSYMBOL_FOR = 56,                       /* FOR  */
-  YYSYMBOL_NEXT = 57,                      /* NEXT  */
-  YYSYMBOL_STEP = 58,                      /* STEP  */
-  YYSYMBOL_TO = 59,                        /* TO  */
-  YYSYMBOL_DEBUG = 60,                     /* DEBUG  */
-  YYSYMBOL_GOTO = 61,                      /* GOTO  */
-  YYSYMBOL_GOSUB = 62,                     /* GOSUB  */
-  YYSYMBOL_RETURN = 63,                    /* RETURN  */
-  YYSYMBOL_NEW = 64,                       /* NEW  */
-  YYSYMBOL_TRACE = 65,                     /* TRACE  */
-  YYSYMBOL_ON = 66,                        /* ON  */
-  YYSYMBOL_OFF = 67,                       /* OFF  */
-  YYSYMBOL_TEXT = 68,                      /* TEXT  */
-  YYSYMBOL_HTAB = 69,                      /* HTAB  */
-  YYSYMBOL_VTAB = 70,                      /* VTAB  */
-  YYSYMBOL_HOME = 71,                      /* HOME  */
-  YYSYMBOL_GR = 72,                        /* GR  */
-  YYSYMBOL_PLOT = 73,                      /* PLOT  */
-  YYSYMBOL_HGR = 74,                       /* HGR  */
-  YYSYMBOL_HPLOT = 75,                     /* HPLOT  */
-  YYSYMBOL_END = 76,                       /* END  */
-  YYSYMBOL_NOT = 77,                       /* NOT  */
-  YYSYMBOL_READ = 78,                      /* READ  */
-  YYSYMBOL_DATA = 79,                      /* DATA  */
-  YYSYMBOL_VLIN = 80,                      /* VLIN  */
-  YYSYMBOL_HLIN = 81,                      /* HLIN  */
-  YYSYMBOL_MID = 82,                       /* MID  */
-  YYSYMBOL_LEFT = 83,                      /* LEFT  */
-  YYSYMBOL_RIGHT = 84,                     /* RIGHT  */
-  YYSYMBOL_LEN = 85,                       /* LEN  */
-  YYSYMBOL_STRING = 86,                    /* STRING  */
-  YYSYMBOL_AMPER = 87,                     /* AMPER  */
-  YYSYMBOL_AT = 88,                        /* AT  */
-  YYSYMBOL_CHR = 89,                       /* CHR  */
-  YYSYMBOL_INT = 90,                       /* INT  */
-  YYSYMBOL_YYACCEPT = 91,                  /* $accept  */
-  YYSYMBOL_pgm = 92,                       /* pgm  */
-  YYSYMBOL_93_1 = 93,                      /* $@1  */
-  YYSYMBOL_line = 94,                      /* line  */
-  YYSYMBOL_95_2 = 95,                      /* $@2  */
-  YYSYMBOL_96_3 = 96,                      /* $@3  */
-  YYSYMBOL_inst = 97,                      /* inst  */
-  YYSYMBOL_98_4 = 98,                      /* $@4  */
-  YYSYMBOL_99_5 = 99,                      /* $@5  */
-  YYSYMBOL_100_6 = 100,                    /* $@6  */
-  YYSYMBOL_101_7 = 101,                    /* $@7  */
-  YYSYMBOL_102_8 = 102,                    /* $@8  */
-  YYSYMBOL_103_9 = 103,                    /* $@9  */
-  YYSYMBOL_104_10 = 104,                   /* $@10  */
-  YYSYMBOL_105_11 = 105,                   /* $@11  */
-  YYSYMBOL_106_12 = 106,                   /* $@12  */
-  YYSYMBOL_107_13 = 107,                   /* $@13  */
-  YYSYMBOL_108_14 = 108,                   /* $@14  */
-  YYSYMBOL_109_15 = 109,                   /* $@15  */
-  YYSYMBOL_110_16 = 110,                   /* $@16  */
-  YYSYMBOL_111_17 = 111,                   /* $@17  */
-  YYSYMBOL_112_18 = 112,                   /* $@18  */
-  YYSYMBOL_113_19 = 113,                   /* $@19  */
-  YYSYMBOL_114_20 = 114,                   /* $@20  */
-  YYSYMBOL_115_21 = 115,                   /* $@21  */
-  YYSYMBOL_116_22 = 116,                   /* $@22  */
-  YYSYMBOL_117_23 = 117,                   /* $@23  */
-  YYSYMBOL_118_24 = 118,                   /* $@24  */
-  YYSYMBOL_119_25 = 119,                   /* $@25  */
-  YYSYMBOL_120_26 = 120,                   /* $@26  */
-  YYSYMBOL_121_27 = 121,                   /* $@27  */
-  YYSYMBOL_list = 122,                     /* list  */
-  YYSYMBOL_cond = 123,                     /* cond  */
-  YYSYMBOL_124_28 = 124,                   /* $@28  */
-  YYSYMBOL_125_29 = 125,                   /* $@29  */
-  YYSYMBOL_oper = 126,                     /* oper  */
-  YYSYMBOL_sexpr = 127,                    /* sexpr  */
-  YYSYMBOL_128_30 = 128,                   /* $@30  */
-  YYSYMBOL_string = 129,                   /* string  */
-  YYSYMBOL_expr = 130,                     /* expr  */
-  YYSYMBOL_131_31 = 131,                   /* $@31  */
-  YYSYMBOL_132_32 = 132,                   /* $@32  */
-  YYSYMBOL_133_33 = 133,                   /* $@33  */
-  YYSYMBOL_134_34 = 134,                   /* $@34  */
-  YYSYMBOL_135_35 = 135,                   /* @35  */
-  YYSYMBOL_136_36 = 136,                   /* $@36  */
-  YYSYMBOL_137_37 = 137,                   /* $@37  */
-  YYSYMBOL_138_38 = 138,                   /* $@38  */
-  YYSYMBOL_139_39 = 139,                   /* $@39  */
-  YYSYMBOL_140_40 = 140,                   /* $@40  */
-  YYSYMBOL_141_41 = 141,                   /* @41  */
-  YYSYMBOL_142_42 = 142                    /* $@42  */
+  YYSYMBOL_PR = 3,                         /* PR  */
+  YYSYMBOL_STR = 4,                        /* STR  */
+  YYSYMBOL_SAVE = 5,                       /* SAVE  */
+  YYSYMBOL_GET = 6,                        /* GET  */
+  YYSYMBOL_PEEK = 7,                       /* PEEK  */
+  YYSYMBOL_POKE = 8,                       /* POKE  */
+  YYSYMBOL_RUN = 9,                        /* RUN  */
+  YYSYMBOL_RND = 10,                       /* RND  */
+  YYSYMBOL_PRINT = 11,                     /* PRINT  */
+  YYSYMBOL_IDENTIFIER = 12,                /* IDENTIFIER  */
+  YYSYMBOL_PLUS = 13,                      /* PLUS  */
+  YYSYMBOL_MINUS = 14,                     /* MINUS  */
+  YYSYMBOL_ASTERISK = 15,                  /* ASTERISK  */
+  YYSYMBOL_DIVIDE = 16,                    /* DIVIDE  */
+  YYSYMBOL_NUMBER = 17,                    /* NUMBER  */
+  YYSYMBOL_LIST = 18,                      /* LIST  */
+  YYSYMBOL_INPUT = 19,                     /* INPUT  */
+  YYSYMBOL_LET = 20,                       /* LET  */
+  YYSYMBOL_SQR = 21,                       /* SQR  */
+  YYSYMBOL_SIN = 22,                       /* SIN  */
+  YYSYMBOL_COS = 23,                       /* COS  */
+  YYSYMBOL_TAN = 24,                       /* TAN  */
+  YYSYMBOL_EXP = 25,                       /* EXP  */
+  YYSYMBOL_DIM = 26,                       /* DIM  */
+  YYSYMBOL_ABS = 27,                       /* ABS  */
+  YYSYMBOL_OR = 28,                        /* OR  */
+  YYSYMBOL_AND = 29,                       /* AND  */
+  YYSYMBOL_ASC = 30,                       /* ASC  */
+  YYSYMBOL_REM = 31,                       /* REM  */
+  YYSYMBOL_QUOTE = 32,                     /* QUOTE  */
+  YYSYMBOL_EQUAL = 33,                     /* EQUAL  */
+  YYSYMBOL_PO = 34,                        /* PO  */
+  YYSYMBOL_PF = 35,                        /* PF  */
+  YYSYMBOL_CO = 36,                        /* CO  */
+  YYSYMBOL_CF = 37,                        /* CF  */
+  YYSYMBOL_DP = 38,                        /* DP  */
+  YYSYMBOL_PG = 39,                        /* PG  */
+  YYSYMBOL_PP = 40,                        /* PP  */
+  YYSYMBOL_PE = 41,                        /* PE  */
+  YYSYMBOL_GE = 42,                        /* GE  */
+  YYSYMBOL_DIFF = 43,                      /* DIFF  */
+  YYSYMBOL_DOT = 44,                       /* DOT  */
+  YYSYMBOL_COMMA = 45,                     /* COMMA  */
+  YYSYMBOL_SEMICOLOMN = 46,                /* SEMICOLOMN  */
+  YYSYMBOL_CR = 47,                        /* CR  */
+  YYSYMBOL_RANDOMIZE = 48,                 /* RANDOMIZE  */
+  YYSYMBOL_MOD = 49,                       /* MOD  */
+  YYSYMBOL_CHARS = 50,                     /* CHARS  */
+  YYSYMBOL_FLOAT = 51,                     /* FLOAT  */
+  YYSYMBOL_SYSTEM = 52,                    /* SYSTEM  */
+  YYSYMBOL_DUMP = 53,                      /* DUMP  */
+  YYSYMBOL_CLEAR = 54,                     /* CLEAR  */
+  YYSYMBOL_COLOR = 55,                     /* COLOR  */
+  YYSYMBOL_DRAW = 56,                      /* DRAW  */
+  YYSYMBOL_IF = 57,                        /* IF  */
+  YYSYMBOL_THEN = 58,                      /* THEN  */
+  YYSYMBOL_ELSE = 59,                      /* ELSE  */
+  YYSYMBOL_FOR = 60,                       /* FOR  */
+  YYSYMBOL_NEXT = 61,                      /* NEXT  */
+  YYSYMBOL_STEP = 62,                      /* STEP  */
+  YYSYMBOL_TO = 63,                        /* TO  */
+  YYSYMBOL_DEBUG = 64,                     /* DEBUG  */
+  YYSYMBOL_GOTO = 65,                      /* GOTO  */
+  YYSYMBOL_GOSUB = 66,                     /* GOSUB  */
+  YYSYMBOL_RETURN = 67,                    /* RETURN  */
+  YYSYMBOL_NEW = 68,                       /* NEW  */
+  YYSYMBOL_TRACE = 69,                     /* TRACE  */
+  YYSYMBOL_NOTRACE = 70,                   /* NOTRACE  */
+  YYSYMBOL_ON = 71,                        /* ON  */
+  YYSYMBOL_OFF = 72,                       /* OFF  */
+  YYSYMBOL_TEXT = 73,                      /* TEXT  */
+  YYSYMBOL_HTAB = 74,                      /* HTAB  */
+  YYSYMBOL_VTAB = 75,                      /* VTAB  */
+  YYSYMBOL_HOME = 76,                      /* HOME  */
+  YYSYMBOL_GR = 77,                        /* GR  */
+  YYSYMBOL_PLOT = 78,                      /* PLOT  */
+  YYSYMBOL_HGR = 79,                       /* HGR  */
+  YYSYMBOL_HPLOT = 80,                     /* HPLOT  */
+  YYSYMBOL_END = 81,                       /* END  */
+  YYSYMBOL_NOT = 82,                       /* NOT  */
+  YYSYMBOL_READ = 83,                      /* READ  */
+  YYSYMBOL_DATA = 84,                      /* DATA  */
+  YYSYMBOL_VLIN = 85,                      /* VLIN  */
+  YYSYMBOL_HLIN = 86,                      /* HLIN  */
+  YYSYMBOL_MID = 87,                       /* MID  */
+  YYSYMBOL_LEFT = 88,                      /* LEFT  */
+  YYSYMBOL_RIGHT = 89,                     /* RIGHT  */
+  YYSYMBOL_LEN = 90,                       /* LEN  */
+  YYSYMBOL_STRING = 91,                    /* STRING  */
+  YYSYMBOL_AMPER = 92,                     /* AMPER  */
+  YYSYMBOL_AT = 93,                        /* AT  */
+  YYSYMBOL_CHR = 94,                       /* CHR  */
+  YYSYMBOL_INT = 95,                       /* INT  */
+  YYSYMBOL_YYACCEPT = 96,                  /* $accept  */
+  YYSYMBOL_pgm = 97,                       /* pgm  */
+  YYSYMBOL_98_1 = 98,                      /* $@1  */
+  YYSYMBOL_line = 99,                      /* line  */
+  YYSYMBOL_100_2 = 100,                    /* $@2  */
+  YYSYMBOL_101_3 = 101,                    /* $@3  */
+  YYSYMBOL_inst = 102,                     /* inst  */
+  YYSYMBOL_103_4 = 103,                    /* $@4  */
+  YYSYMBOL_104_5 = 104,                    /* $@5  */
+  YYSYMBOL_105_6 = 105,                    /* $@6  */
+  YYSYMBOL_106_7 = 106,                    /* $@7  */
+  YYSYMBOL_107_8 = 107,                    /* $@8  */
+  YYSYMBOL_108_9 = 108,                    /* $@9  */
+  YYSYMBOL_109_10 = 109,                   /* $@10  */
+  YYSYMBOL_110_11 = 110,                   /* $@11  */
+  YYSYMBOL_111_12 = 111,                   /* $@12  */
+  YYSYMBOL_112_13 = 112,                   /* $@13  */
+  YYSYMBOL_113_14 = 113,                   /* $@14  */
+  YYSYMBOL_114_15 = 114,                   /* $@15  */
+  YYSYMBOL_115_16 = 115,                   /* $@16  */
+  YYSYMBOL_116_17 = 116,                   /* $@17  */
+  YYSYMBOL_117_18 = 117,                   /* $@18  */
+  YYSYMBOL_118_19 = 118,                   /* $@19  */
+  YYSYMBOL_119_20 = 119,                   /* $@20  */
+  YYSYMBOL_120_21 = 120,                   /* $@21  */
+  YYSYMBOL_121_22 = 121,                   /* $@22  */
+  YYSYMBOL_122_23 = 122,                   /* $@23  */
+  YYSYMBOL_123_24 = 123,                   /* $@24  */
+  YYSYMBOL_124_25 = 124,                   /* $@25  */
+  YYSYMBOL_125_26 = 125,                   /* $@26  */
+  YYSYMBOL_126_27 = 126,                   /* $@27  */
+  YYSYMBOL_127_28 = 127,                   /* $@28  */
+  YYSYMBOL_opt_i = 128,                    /* opt_i  */
+  YYSYMBOL_opt_prompt = 129,               /* opt_prompt  */
+  YYSYMBOL_opt_then = 130,                 /* opt_then  */
+  YYSYMBOL_list = 131,                     /* list  */
+  YYSYMBOL_cond = 132,                     /* cond  */
+  YYSYMBOL_133_29 = 133,                   /* $@29  */
+  YYSYMBOL_134_30 = 134,                   /* $@30  */
+  YYSYMBOL_135_31 = 135,                   /* $@31  */
+  YYSYMBOL_136_32 = 136,                   /* $@32  */
+  YYSYMBOL_oper = 137,                     /* oper  */
+  YYSYMBOL_sexpr = 138,                    /* sexpr  */
+  YYSYMBOL_multi_expr = 139,               /* multi_expr  */
+  YYSYMBOL_140_33 = 140,                   /* $@33  */
+  YYSYMBOL_141_34 = 141,                   /* $@34  */
+  YYSYMBOL_142_35 = 142,                   /* $@35  */
+  YYSYMBOL_143_36 = 143,                   /* $@36  */
+  YYSYMBOL_opt_print = 144,                /* opt_print  */
+  YYSYMBOL_sep = 145,                      /* sep  */
+  YYSYMBOL_string = 146,                   /* string  */
+  YYSYMBOL_expr = 147,                     /* expr  */
+  YYSYMBOL_148_37 = 148,                   /* $@37  */
+  YYSYMBOL_149_38 = 149,                   /* $@38  */
+  YYSYMBOL_150_39 = 150,                   /* $@39  */
+  YYSYMBOL_151_40 = 151,                   /* $@40  */
+  YYSYMBOL_152_41 = 152,                   /* @41  */
+  YYSYMBOL_153_42 = 153,                   /* $@42  */
+  YYSYMBOL_154_43 = 154,                   /* $@43  */
+  YYSYMBOL_155_44 = 155,                   /* $@44  */
+  YYSYMBOL_156_45 = 156,                   /* $@45  */
+  YYSYMBOL_157_46 = 157,                   /* $@46  */
+  YYSYMBOL_158_47 = 158,                   /* @47  */
+  YYSYMBOL_159_48 = 159                    /* $@48  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -533,7 +558,7 @@ typedef int yytype_uint16;
 
 
 /* Stored state numbers (used for stacks). */
-typedef yytype_uint8 yy_state_t;
+typedef yytype_int16 yy_state_t;
 
 /* State numbers in computations.  */
 typedef int yy_state_fast_t;
@@ -738,19 +763,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   351
+#define YYLAST   432
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  91
+#define YYNTOKENS  96
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  52
+#define YYNNTS  64
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  126
+#define YYNRULES  154
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  245
+#define YYNSTATES  286
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   345
+#define YYMAXUTOK   350
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -798,26 +823,30 @@ static const yytype_int8 yytranslate[] =
       55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
       65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
       75,    76,    77,    78,    79,    80,    81,    82,    83,    84,
-      85,    86,    87,    88,    89,    90
+      85,    86,    87,    88,    89,    90,    91,    92,    93,    94,
+      95
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   147,   147,   148,   148,   149,   152,   152,   153,   153,
-     156,   156,   157,   157,   167,   167,   167,   167,   177,   177,
-     177,   177,   184,   184,   191,   191,   192,   195,   223,   224,
-     237,   238,   239,   240,   241,   242,   242,   243,   243,   244,
-     244,   245,   245,   246,   247,   247,   248,   248,   249,   250,
-     251,   252,   273,   274,   275,   276,   276,   276,   276,   277,
-     278,   279,   280,   281,   282,   282,   282,   282,   283,   283,
-     283,   284,   285,   286,   294,   309,   310,   313,   313,   313,
-     314,   315,   316,   317,   318,   319,   322,   323,   324,   327,
-     328,   329,   330,   331,   332,   332,   335,   336,   339,   339,
-     340,   340,   341,   341,   342,   342,   343,   343,   344,   345,
-     346,   368,   368,   369,   369,   370,   371,   371,   372,   373,
-     373,   374,   375,   381,   375,   388,   388
+       0,   155,   155,   156,   156,   157,   160,   160,   161,   161,
+     164,   164,   164,   166,   166,   166,   166,   176,   176,   176,
+     176,   184,   184,   190,   190,   196,   196,   197,   200,   228,
+     229,   242,   243,   244,   245,   246,   247,   247,   248,   248,
+     249,   249,   250,   250,   251,   252,   252,   253,   253,   254,
+     261,   262,   263,   284,   285,   286,   287,   287,   287,   287,
+     288,   289,   290,   291,   292,   293,   293,   293,   293,   294,
+     294,   294,   295,   296,   297,   306,   308,   309,   310,   325,
+     326,   329,   330,   333,   334,   337,   338,   341,   341,   341,
+     342,   343,   344,   345,   346,   347,   347,   347,   350,   351,
+     352,   353,   354,   357,   358,   359,   360,   361,   362,   365,
+     365,   374,   374,   383,   383,   383,   386,   387,   388,   389,
+     390,   393,   394,   397,   398,   401,   401,   402,   402,   403,
+     403,   404,   404,   405,   405,   406,   407,   408,   430,   431,
+     431,   432,   432,   433,   434,   434,   435,   436,   436,   437,
+     438,   444,   438,   451,   451
 };
 #endif
 
@@ -833,23 +862,25 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "\"end of file\"", "error", "\"invalid token\"", "SAVE", "GET", "PEEK",
-  "POKE", "RUN", "RND", "PRINT", "IDENTIFIER", "PLUS", "MINUS", "ASTERISK",
-  "DIVIDE", "NUMBER", "LIST", "INPUT", "LET", "SQR", "SIN", "COS", "TAN",
-  "EXP", "DIM", "ABS", "OR", "AND", "ASC", "REM", "QUOTE", "EQUAL", "PO",
-  "PF", "CO", "CF", "DP", "PG", "PP", "DIFF", "DOT", "COMMA", "SEMICOLOMN",
-  "CR", "RANDOMIZE", "MOD", "CHARS", "FLOAT", "SYSTEM", "DUMP", "CLEAR",
-  "COLOR", "DRAW", "IF", "THEN", "ELSE", "FOR", "NEXT", "STEP", "TO",
-  "DEBUG", "GOTO", "GOSUB", "RETURN", "NEW", "TRACE", "ON", "OFF", "TEXT",
-  "HTAB", "VTAB", "HOME", "GR", "PLOT", "HGR", "HPLOT", "END", "NOT",
-  "READ", "DATA", "VLIN", "HLIN", "MID", "LEFT", "RIGHT", "LEN", "STRING",
-  "AMPER", "AT", "CHR", "INT", "$accept", "pgm", "$@1", "line", "$@2",
-  "$@3", "inst", "$@4", "$@5", "$@6", "$@7", "$@8", "$@9", "$@10", "$@11",
-  "$@12", "$@13", "$@14", "$@15", "$@16", "$@17", "$@18", "$@19", "$@20",
-  "$@21", "$@22", "$@23", "$@24", "$@25", "$@26", "$@27", "list", "cond",
-  "$@28", "$@29", "oper", "sexpr", "$@30", "string", "expr", "$@31",
-  "$@32", "$@33", "$@34", "@35", "$@36", "$@37", "$@38", "$@39", "$@40",
-  "@41", "$@42", YY_NULLPTR
+  "\"end of file\"", "error", "\"invalid token\"", "PR", "STR", "SAVE",
+  "GET", "PEEK", "POKE", "RUN", "RND", "PRINT", "IDENTIFIER", "PLUS",
+  "MINUS", "ASTERISK", "DIVIDE", "NUMBER", "LIST", "INPUT", "LET", "SQR",
+  "SIN", "COS", "TAN", "EXP", "DIM", "ABS", "OR", "AND", "ASC", "REM",
+  "QUOTE", "EQUAL", "PO", "PF", "CO", "CF", "DP", "PG", "PP", "PE", "GE",
+  "DIFF", "DOT", "COMMA", "SEMICOLOMN", "CR", "RANDOMIZE", "MOD", "CHARS",
+  "FLOAT", "SYSTEM", "DUMP", "CLEAR", "COLOR", "DRAW", "IF", "THEN",
+  "ELSE", "FOR", "NEXT", "STEP", "TO", "DEBUG", "GOTO", "GOSUB", "RETURN",
+  "NEW", "TRACE", "NOTRACE", "ON", "OFF", "TEXT", "HTAB", "VTAB", "HOME",
+  "GR", "PLOT", "HGR", "HPLOT", "END", "NOT", "READ", "DATA", "VLIN",
+  "HLIN", "MID", "LEFT", "RIGHT", "LEN", "STRING", "AMPER", "AT", "CHR",
+  "INT", "$accept", "pgm", "$@1", "line", "$@2", "$@3", "inst", "$@4",
+  "$@5", "$@6", "$@7", "$@8", "$@9", "$@10", "$@11", "$@12", "$@13",
+  "$@14", "$@15", "$@16", "$@17", "$@18", "$@19", "$@20", "$@21", "$@22",
+  "$@23", "$@24", "$@25", "$@26", "$@27", "$@28", "opt_i", "opt_prompt",
+  "opt_then", "list", "cond", "$@29", "$@30", "$@31", "$@32", "oper",
+  "sexpr", "multi_expr", "$@33", "$@34", "$@35", "$@36", "opt_print",
+  "sep", "string", "expr", "$@37", "$@38", "$@39", "$@40", "@41", "$@42",
+  "$@43", "$@44", "$@45", "$@46", "@47", "$@48", YY_NULLPTR
 };
 
 static const char *
@@ -873,16 +904,16 @@ static const yytype_int16 yytoknum[] =
      315,   316,   317,   318,   319,   320,   321,   322,   323,   324,
      325,   326,   327,   328,   329,   330,   331,   332,   333,   334,
      335,   336,   337,   338,   339,   340,   341,   342,   343,   344,
-     345
+     345,   346,   347,   348,   349,   350
 };
 #endif
 
-#define YYPACT_NINF (-106)
+#define YYPACT_NINF (-164)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
 
-#define YYTABLE_NINF (-69)
+#define YYTABLE_NINF (-114)
 
 #define yytable_value_is_error(Yyn) \
   0
@@ -891,85 +922,95 @@ static const yytype_int16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-    -106,    37,  -106,  -106,  -106,  -106,   145,   145,   -35,     5,
-     -80,    -5,    -3,  -106,    43,  -106,   -56,  -106,  -106,  -106,
-    -106,  -106,  -106,  -106,   -24,  -106,  -106,  -106,  -106,    -2,
-    -106,  -106,  -106,  -106,  -106,   -25,  -106,    28,    -3,    -3,
-      -3,  -106,   -21,    17,    45,    17,  -106,  -106,  -106,    -3,
-      34,  -106,  -106,  -106,    46,    47,    49,    50,    52,    54,
-    -106,  -106,  -106,   131,    -3,    51,  -106,    58,    67,    -1,
-      78,  -106,  -106,    -3,    -3,  -106,  -106,    -3,    -3,    -3,
-      31,  -106,    72,    93,   176,   216,    64,  -106,  -106,  -106,
-     237,  -106,    -3,  -106,  -106,  -106,    -3,    -3,    14,    -3,
-      82,  -106,  -106,  -106,  -106,    -3,    93,  -106,    89,    90,
-      92,  -106,    99,   125,  -106,  -106,  -106,   106,    -1,    -1,
-       6,    -3,   108,   110,    93,    93,    93,    93,    93,    -3,
-      -3,    -3,    -3,    51,   145,   115,  -106,    -3,    93,    -3,
-      -3,    -3,   241,   247,   114,   264,    -3,    -3,    -3,    -3,
-      -3,    93,   -36,   -36,   -36,  -106,   -36,   124,    -3,    36,
-      48,    -1,    -1,   145,   231,   -36,  -106,   116,   222,    93,
-      10,    35,   125,    17,  -106,    93,   270,   274,   278,  -106,
-    -106,  -106,  -106,   282,    93,    93,    93,    93,   117,   119,
-     123,    -3,  -106,  -106,   287,  -106,    48,    48,    17,  -106,
-    -106,  -106,  -106,  -106,    -3,  -106,  -106,    -3,    -3,    -3,
-     132,  -106,  -106,  -106,  -106,    -3,    -3,    -3,   305,    -3,
-    -106,    -3,    59,    -3,    -3,    93,    93,    93,  -106,   226,
-     310,   314,  -106,    93,    93,  -106,    93,    93,    -3,  -106,
-    -106,    -3,   318,    93,  -106
+    -164,     5,  -164,  -164,  -164,  -164,   242,   242,   -46,  -164,
+      -8,    -3,    -9,   130,  -164,  -164,  -164,   -44,   -80,  -164,
+    -164,  -164,  -164,   130,  -164,  -164,    15,   -39,  -164,  -164,
+    -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,   -34,
+    -164,    43,   130,   130,   130,  -164,   -43,    25,    56,    25,
+    -164,  -164,  -164,   130,    40,    45,  -164,  -164,    48,    62,
+      64,    87,    88,    92,  -164,  -164,  -164,   156,     6,    31,
+     116,    50,  -164,   131,    -1,    77,   136,  -164,  -164,  -164,
+    -164,   130,   130,   130,   130,   130,    86,  -164,   111,    57,
+     163,   174,   124,  -164,  -164,  -164,   262,  -164,   130,   130,
+    -164,  -164,  -164,   130,   130,    67,   130,   127,  -164,  -164,
+    -164,  -164,   130,  -164,   130,    19,    68,  -164,  -164,  -164,
+     132,  -164,   130,   129,    77,    77,   -12,   130,   -42,   133,
+      57,    57,    57,    57,    57,   130,   130,   130,   130,     6,
+     242,   134,  -164,   130,   266,    57,   130,   130,   130,   316,
+     322,   138,   326,   130,   130,   130,   130,   130,    57,     8,
+      57,   141,  -164,   146,   148,   149,  -164,   171,  -164,   157,
+      19,   159,   190,   130,    22,    38,    77,    77,  -164,   242,
+     250,   160,  -164,   150,   207,    57,   103,   123,  -164,    25,
+    -164,    57,  -164,   330,   334,   339,  -164,  -164,  -164,  -164,
+     357,    57,    57,    57,    57,  -164,  -164,     8,    14,   130,
+     -42,   -42,   -42,   -42,  -164,   171,  -164,   130,   362,  -164,
+      38,    38,    25,  -164,  -164,  -164,  -164,  -164,  -164,  -164,
+     130,  -164,  -164,   130,   130,   130,   164,  -164,  -164,  -164,
+    -164,    14,   171,    57,   366,   155,   168,   169,  -164,   130,
+     130,    57,  -164,   130,   -42,    27,   130,   130,    57,    57,
+      57,  -164,   171,    57,  -164,   130,   130,   130,   370,    57,
+      57,  -164,  -164,    57,    57,   223,   374,   380,  -164,   130,
+     130,  -164,  -164,    57,   397,  -164
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
      Performed when YYTABLE does not specify something else to do.  Zero
      means the default is an error.  */
-static const yytype_int8 yydefact[] =
+static const yytype_uint8 yydefact[] =
 {
-       2,     8,     1,     6,     5,     3,    14,    14,     0,     0,
-       0,     0,     0,    27,    10,    26,    41,    18,    34,    28,
-      29,    35,    55,    59,     0,    37,    39,    62,    74,     0,
-      49,    44,    46,    48,    51,    64,    63,     0,     0,     0,
-       0,    22,     0,     9,     0,     7,     4,    73,    54,     0,
-       0,   110,   119,   108,     0,     0,     0,     0,     0,     0,
-     106,   109,   125,     0,     0,     0,    43,     0,     0,    77,
-       0,    32,    33,     0,     0,    30,    31,     0,     0,     0,
-       0,    61,    60,    75,     0,     0,     0,    50,    24,    15,
-       0,   122,     0,   116,   113,   111,     0,     0,     0,     0,
-       0,    98,   100,   102,   104,     0,    11,    97,     0,     0,
-       0,    96,     0,    13,    89,    42,    19,     0,    77,    77,
-       0,     0,     0,     0,    38,    40,    45,    47,    65,     0,
-       0,     0,     0,     0,    14,     0,    52,     0,   120,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,    53,     0,     0,     0,    94,     0,     0,     0,     0,
-      84,    77,    77,    14,     0,     0,    56,     0,     0,    76,
-       0,     0,    23,    25,    16,   123,     0,     0,     0,   115,
-     118,   121,   107,     0,    99,   101,   103,   105,     0,     0,
-       0,     0,    90,    20,     0,    81,    82,    83,    36,    86,
-      87,    88,    78,    85,     0,    66,    69,     0,     0,     0,
-       0,   117,   114,   112,   126,     0,     0,     0,     0,     0,
-      80,     0,     0,     0,     0,    72,    71,    17,   124,     0,
-       0,     0,    95,    21,    79,    57,    67,    70,     0,    92,
-      93,     0,     0,    58,    91
+       2,     8,     1,     6,     5,     3,    13,    13,     0,    78,
+       0,     0,     0,     0,    28,    10,    27,    42,    17,    35,
+      29,    30,    77,     0,    36,    56,    79,     0,    38,    40,
+      63,    76,    31,    32,    50,    45,    47,    49,    52,    65,
+      64,     0,     0,     0,     0,    21,     0,     9,     0,     7,
+       4,    74,    55,     0,     0,   137,   147,   135,     0,     0,
+       0,     0,     0,     0,   133,   136,   153,     0,   109,     0,
+       0,     0,    23,     0,     0,    87,     0,    80,    60,    33,
+      34,     0,     0,     0,     0,     0,     0,    62,    61,    85,
+       0,     0,     0,    51,    25,    14,     0,   150,     0,     0,
+     144,   141,   139,     0,     0,     0,     0,     0,   125,   127,
+     129,   131,     0,    11,     0,     0,     0,    82,    43,    44,
+       0,    18,     0,     0,    87,    87,    83,     0,     0,     0,
+      39,    41,    46,    48,    66,     0,     0,     0,     0,   109,
+      13,     0,    53,     0,     0,   148,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,    54,   116,
+     110,     0,   124,     0,     0,     0,   123,   112,   103,     0,
+       0,     0,     0,     0,     0,    94,    87,    87,    84,    13,
+       0,     0,    57,     0,     0,    86,     0,     0,    22,    26,
+      15,   151,   138,     0,     0,     0,   143,   146,   149,   134,
+       0,   126,   128,   130,   132,   121,   122,    12,     0,     0,
+       0,     0,     0,     0,   114,    24,    19,     0,     0,    91,
+      92,    93,    37,    98,    99,   100,   101,   102,    88,    96,
+       0,    67,    70,     0,     0,     0,     0,   145,   142,   140,
+     154,     0,   118,   117,     0,     0,     0,     0,   104,     0,
+       0,    75,    90,     0,     0,     0,     0,     0,    73,    72,
+      16,   152,   120,   119,   108,     0,     0,     0,     0,    20,
+      89,    97,    58,    68,    71,     0,     0,     0,   115,     0,
+       0,   106,   107,    59,     0,   105
 };
 
   /* YYPGOTO[NTERM-NUM].  */
-static const yytype_int8 yypgoto[] =
+static const yytype_int16 yypgoto[] =
 {
-    -106,  -106,  -106,  -106,  -106,  -106,    -4,  -106,  -106,  -106,
-    -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,
-    -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,
-    -106,  -106,  -105,  -106,  -106,  -106,    23,  -106,   -37,   -38,
-    -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,  -106,
-    -106,  -106
+    -164,  -164,  -164,  -164,  -164,  -164,    -5,  -164,  -164,  -164,
+    -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,
+    -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,
+    -164,  -164,  -164,  -164,  -164,  -164,    21,  -164,  -164,  -164,
+    -164,  -164,  -163,    63,  -164,  -164,  -164,  -164,  -164,     2,
+    -125,   -23,  -164,  -164,  -164,  -164,  -164,  -164,  -164,  -164,
+    -164,  -164,  -164,  -164
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
-static const yytype_uint8 yydefgoto[] =
+static const yytype_int16 yydefgoto[] =
 {
-       0,     1,     8,     5,     7,     6,    43,    64,    65,    44,
-     135,   209,    68,   157,   219,    86,   134,    69,    73,    74,
-      67,    77,    78,    70,   204,   241,    79,   167,   223,    80,
-     224,    82,   120,   121,   221,   202,   113,   191,   122,    63,
-     147,   148,   149,   150,    99,   141,   140,   139,    92,   137,
-     210,   100
+       0,     1,     8,     5,     7,     6,    47,    68,   159,    48,
+     141,   235,    73,   171,   250,    92,   120,   140,    75,    81,
+      82,    70,    83,    84,    76,   230,   279,    85,   183,   256,
+      86,   257,    78,    71,   179,    88,   126,   127,   253,   128,
+     254,   228,   167,   113,   114,   115,   116,   249,   207,   208,
+     168,    67,   154,   155,   156,   157,   106,   148,   147,   146,
+      99,   143,   236,   107
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -977,149 +1018,175 @@ static const yytype_uint8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int16 yytable[] =
 {
-      83,    84,    85,    45,   117,    50,    48,    51,    46,    52,
-     107,    90,    53,   159,   160,    47,    54,    55,    56,    57,
-      58,   101,   102,   103,   104,    59,   106,    49,   114,    60,
-      66,   118,   161,   162,   -68,   124,   125,     2,    81,   126,
-     127,   128,    71,    72,    61,   107,   101,   102,   103,   104,
-     111,    87,     3,    88,   138,    89,   196,   197,   142,   143,
-     163,   145,   161,   162,    75,    76,    91,   151,   115,   195,
-     101,   102,   103,   104,   161,   162,   119,   116,    93,    94,
-       4,    95,    96,   164,    97,   111,    98,    62,   123,   -12,
-     129,   168,   169,   170,   171,   133,   114,   107,   207,   175,
-     144,   176,   177,   178,   101,   102,   103,   104,   183,   184,
-     185,   186,   187,   130,   146,   188,   189,   190,   235,   192,
-     194,   152,   153,   208,   154,   -12,   -12,   -12,   203,   -12,
-     173,   155,   -12,   108,   109,   110,   156,   111,   158,   165,
-     112,   166,   101,   102,   103,   104,   174,   181,     9,    10,
-      11,    12,    13,   218,    14,   193,   172,   205,   215,   198,
-     216,    15,    16,    17,   217,   228,   222,     0,     0,   225,
-     226,   227,   105,     0,    18,     0,     0,   229,   230,   231,
-       0,   233,     0,   234,     0,   236,   237,   101,   102,   103,
-     104,     0,     0,    19,    20,     0,     0,     0,    21,     0,
-     242,    22,    23,   243,     0,    24,    25,    26,    27,    28,
-      29,     0,     0,    30,    31,    32,    33,   131,     0,    34,
-      35,    36,     0,    37,    38,    39,    40,   101,   102,   103,
-     104,    41,    42,   101,   102,   103,   104,   101,   102,   103,
-     104,     0,   101,   102,   103,   104,     0,     0,   101,   102,
-     103,   104,   101,   102,   103,   104,     0,   132,   101,   102,
-     103,   104,   199,   206,     0,     0,     0,   238,   200,   201,
-     136,     0,     0,     0,   179,   101,   102,   103,   104,     0,
-     180,   101,   102,   103,   104,   101,   102,   103,   104,   101,
-     102,   103,   104,   101,   102,   103,   104,   182,   101,   102,
-     103,   104,     0,   211,     0,     0,     0,   212,     0,     0,
-       0,   213,     0,     0,     0,   214,   101,   102,   103,   104,
-     220,   101,   102,   103,   104,   101,   102,   103,   104,   101,
-     102,   103,   104,     0,     0,     0,     0,     0,   232,     0,
-       0,     0,     0,   239,     0,     0,     0,   240,     0,     0,
-       0,   244
+      74,    50,    49,   181,    51,     2,    69,   215,   162,    52,
+    -111,    72,   108,   109,   110,   111,   176,   177,   161,    89,
+      90,    91,     3,   161,    54,    53,    55,    77,    56,   -69,
+      96,    57,    79,    80,    93,    58,    59,    60,    61,    62,
+     108,   109,   110,   111,    63,   242,   178,   -81,    64,   166,
+     176,   177,     4,   205,   206,    87,  -111,   219,   130,   131,
+     132,   133,   134,    94,   162,    65,   176,   177,    95,   162,
+     108,   109,   110,   111,    97,   144,   145,   117,   262,    98,
+     149,   150,   100,   152,   123,   245,   246,   247,   248,   158,
+     272,   160,   122,  -111,  -111,  -111,   101,  -111,   102,   172,
+    -113,   163,   164,   165,   180,   166,   163,   164,   165,    66,
+     166,   124,   184,   185,   186,   187,   108,   109,   110,   111,
+     191,   103,   104,   193,   194,   195,   105,   -95,   118,   271,
+     200,   201,   202,   203,   204,   189,   108,   109,   110,   111,
+      54,   119,    55,   121,    56,   174,   175,    57,   129,   135,
+     218,    58,    59,    60,    61,    62,   136,   139,   151,   125,
+      63,   153,   169,   173,    64,   170,   182,   190,   -95,   108,
+     109,   110,   111,   198,   222,   209,   108,   109,   110,   111,
+     210,    65,   211,   212,   213,   243,   244,   108,   109,   110,
+     111,   214,   216,   229,   251,   231,   233,   220,   221,   261,
+     265,   112,   188,   108,   109,   110,   111,   255,   137,   241,
+     258,   259,   260,   266,   267,     0,   234,     0,   263,   138,
+     108,   109,   110,   111,     0,    66,   268,   269,     0,     0,
+     270,     0,     0,   273,   274,   217,   108,   109,   110,   111,
+       0,     0,   275,   276,   277,     9,     0,    10,    11,    12,
+      13,    14,   232,    15,     0,     0,   283,   284,     0,     0,
+      16,    17,    18,   108,   109,   110,   111,     0,   280,     0,
+       0,     0,     0,    19,     0,   108,   109,   110,   111,   108,
+     109,   110,   111,   223,     0,     0,     0,     0,     0,   224,
+     225,   226,   227,     0,    20,    21,    22,   142,    23,    24,
+       0,   192,    25,    26,     0,     0,    27,    28,    29,    30,
+      31,    32,    33,     0,     0,    34,    35,    36,    37,     0,
+       0,    38,    39,    40,     0,    41,    42,    43,    44,   108,
+     109,   110,   111,    45,    46,   108,   109,   110,   111,   108,
+     109,   110,   111,   108,   109,   110,   111,   108,   109,   110,
+     111,   196,   108,   109,   110,   111,     0,   197,     0,     0,
+       0,   199,     0,     0,     0,   237,     0,     0,     0,   238,
+     108,   109,   110,   111,   239,   108,   109,   110,   111,   108,
+     109,   110,   111,   108,   109,   110,   111,   108,   109,   110,
+     111,     0,   240,   108,   109,   110,   111,   252,     0,     0,
+       0,   264,     0,     0,     0,   278,     0,     0,     0,   281,
+     108,   109,   110,   111,     0,   282,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,   285
 };
 
 static const yytype_int16 yycheck[] =
 {
-      38,    39,    40,     7,     5,     8,    86,    10,    43,    12,
-      46,    49,    15,   118,   119,    10,    19,    20,    21,    22,
-      23,    11,    12,    13,    14,    28,    64,    32,    65,    32,
-      86,    32,    26,    27,    59,    73,    74,     0,    10,    77,
-      78,    79,    66,    67,    47,    46,    11,    12,    13,    14,
-      86,    72,    15,    36,    92,    10,   161,   162,    96,    97,
-      54,    99,    26,    27,    66,    67,    32,   105,    10,    33,
-      11,    12,    13,    14,    26,    27,    77,    10,    32,    32,
-      43,    32,    32,   121,    32,    86,    32,    90,    10,    46,
-      59,   129,   130,   131,   132,    31,   133,    46,    88,   137,
-      86,   139,   140,   141,    11,    12,    13,    14,   146,   147,
-     148,   149,   150,    41,    32,   152,   153,   154,    59,   156,
-     158,    32,    32,    88,    32,    82,    83,    84,   165,    86,
-     134,    32,    89,    82,    83,    84,    11,    86,    32,    31,
-      89,    31,    11,    12,    13,    14,    31,    33,     3,     4,
-       5,     6,     7,   191,     9,    31,   133,    41,    41,   163,
-      41,    16,    17,    18,    41,    33,   204,    -1,    -1,   207,
-     208,   209,    41,    -1,    29,    -1,    -1,   215,   216,   217,
-      -1,   219,    -1,   221,    -1,   223,   224,    11,    12,    13,
-      14,    -1,    -1,    48,    49,    -1,    -1,    -1,    53,    -1,
-     238,    56,    57,   241,    -1,    60,    61,    62,    63,    64,
-      65,    -1,    -1,    68,    69,    70,    71,    41,    -1,    74,
-      75,    76,    -1,    78,    79,    80,    81,    11,    12,    13,
-      14,    86,    87,    11,    12,    13,    14,    11,    12,    13,
-      14,    -1,    11,    12,    13,    14,    -1,    -1,    11,    12,
-      13,    14,    11,    12,    13,    14,    -1,    41,    11,    12,
-      13,    14,    31,    41,    -1,    -1,    -1,    41,    37,    38,
-      33,    -1,    -1,    -1,    33,    11,    12,    13,    14,    -1,
-      33,    11,    12,    13,    14,    11,    12,    13,    14,    11,
-      12,    13,    14,    11,    12,    13,    14,    33,    11,    12,
-      13,    14,    -1,    33,    -1,    -1,    -1,    33,    -1,    -1,
-      -1,    33,    -1,    -1,    -1,    33,    11,    12,    13,    14,
-      33,    11,    12,    13,    14,    11,    12,    13,    14,    11,
-      12,    13,    14,    -1,    -1,    -1,    -1,    -1,    33,    -1,
-      -1,    -1,    -1,    33,    -1,    -1,    -1,    33,    -1,    -1,
-      -1,    33
+      23,    47,     7,   128,    12,     0,    50,   170,    50,    12,
+       4,    91,    13,    14,    15,    16,    28,    29,     4,    42,
+      43,    44,    17,     4,    10,    34,    12,    12,    14,    63,
+      53,    17,    71,    72,    77,    21,    22,    23,    24,    25,
+      13,    14,    15,    16,    30,   208,    58,    91,    34,    91,
+      28,    29,    47,    45,    46,    12,    50,    35,    81,    82,
+      83,    84,    85,    38,    50,    51,    28,    29,    12,    50,
+      13,    14,    15,    16,    34,    98,    99,    46,   241,    34,
+     103,   104,    34,   106,     7,   210,   211,   212,   213,   112,
+      63,   114,    93,    87,    88,    89,    34,    91,    34,   122,
+      94,    87,    88,    89,   127,    91,    87,    88,    89,    95,
+      91,    34,   135,   136,   137,   138,    13,    14,    15,    16,
+     143,    34,    34,   146,   147,   148,    34,    50,    12,   254,
+     153,   154,   155,   156,   157,   140,    13,    14,    15,    16,
+      10,    91,    12,    12,    14,   124,   125,    17,    12,    63,
+     173,    21,    22,    23,    24,    25,    45,    33,    91,    82,
+      30,    34,    94,    34,    34,    33,    33,    33,    91,    13,
+      14,    15,    16,    35,   179,    34,    13,    14,    15,    16,
+      34,    51,    34,    34,    13,   208,   209,    13,    14,    15,
+      16,    34,    33,    33,   217,    45,    93,   176,   177,    35,
+      45,    45,   139,    13,    14,    15,    16,   230,    45,   207,
+     233,   234,   235,    45,    45,    -1,    93,    -1,   241,    45,
+      13,    14,    15,    16,    -1,    95,   249,   250,    -1,    -1,
+     253,    -1,    -1,   256,   257,    45,    13,    14,    15,    16,
+      -1,    -1,   265,   266,   267,     3,    -1,     5,     6,     7,
+       8,     9,    45,    11,    -1,    -1,   279,   280,    -1,    -1,
+      18,    19,    20,    13,    14,    15,    16,    -1,    45,    -1,
+      -1,    -1,    -1,    31,    -1,    13,    14,    15,    16,    13,
+      14,    15,    16,    33,    -1,    -1,    -1,    -1,    -1,    39,
+      40,    41,    42,    -1,    52,    53,    54,    35,    56,    57,
+      -1,    35,    60,    61,    -1,    -1,    64,    65,    66,    67,
+      68,    69,    70,    -1,    -1,    73,    74,    75,    76,    -1,
+      -1,    79,    80,    81,    -1,    83,    84,    85,    86,    13,
+      14,    15,    16,    91,    92,    13,    14,    15,    16,    13,
+      14,    15,    16,    13,    14,    15,    16,    13,    14,    15,
+      16,    35,    13,    14,    15,    16,    -1,    35,    -1,    -1,
+      -1,    35,    -1,    -1,    -1,    35,    -1,    -1,    -1,    35,
+      13,    14,    15,    16,    35,    13,    14,    15,    16,    13,
+      14,    15,    16,    13,    14,    15,    16,    13,    14,    15,
+      16,    -1,    35,    13,    14,    15,    16,    35,    -1,    -1,
+      -1,    35,    -1,    -1,    -1,    35,    -1,    -1,    -1,    35,
+      13,    14,    15,    16,    -1,    35,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    35
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,    92,     0,    15,    43,    94,    96,    95,    93,     3,
-       4,     5,     6,     7,     9,    16,    17,    18,    29,    48,
-      49,    53,    56,    57,    60,    61,    62,    63,    64,    65,
-      68,    69,    70,    71,    74,    75,    76,    78,    79,    80,
-      81,    86,    87,    97,   100,    97,    43,    10,    86,    32,
-       8,    10,    12,    15,    19,    20,    21,    22,    23,    28,
-      32,    47,    90,   130,    98,    99,    86,   111,   103,   108,
-     114,    66,    67,   109,   110,    66,    67,   112,   113,   117,
-     120,    10,   122,   130,   130,   130,   106,    72,    36,    10,
-     130,    32,   139,    32,    32,    32,    32,    32,    32,   135,
-     142,    11,    12,    13,    14,    41,   130,    46,    82,    83,
-      84,    86,    89,   127,   129,    10,    10,     5,    32,    77,
-     123,   124,   129,    10,   130,   130,   130,   130,   130,    59,
-      41,    41,    41,    31,   107,   101,    33,   140,   130,   138,
-     137,   136,   130,   130,    86,   130,    32,   131,   132,   133,
-     134,   130,    32,    32,    32,    32,    11,   104,    32,   123,
-     123,    26,    27,    54,   130,    31,    31,   118,   130,   130,
-     130,   130,   127,    97,    31,   130,   130,   130,   130,    33,
-      33,    33,    33,   130,   130,   130,   130,   130,   129,   129,
-     129,   128,   129,    31,   130,    33,   123,   123,    97,    31,
-      37,    38,   126,   129,   115,    41,    41,    88,    88,   102,
-     141,    33,    33,    33,    33,    41,    41,    41,   130,   105,
-      33,   125,   130,   119,   121,   130,   130,   130,    33,   130,
-     130,   130,    33,   130,   130,    59,   130,   130,    41,    33,
-      33,   116,   130,   130,    33
+       0,    97,     0,    17,    47,    99,   101,   100,    98,     3,
+       5,     6,     7,     8,     9,    11,    18,    19,    20,    31,
+      52,    53,    54,    56,    57,    60,    61,    64,    65,    66,
+      67,    68,    69,    70,    73,    74,    75,    76,    79,    80,
+      81,    83,    84,    85,    86,    91,    92,   102,   105,   102,
+      47,    12,    12,    34,    10,    12,    14,    17,    21,    22,
+      23,    24,    25,    30,    34,    51,    95,   147,   103,    50,
+     117,   129,    91,   108,   147,   114,   120,    12,   128,    71,
+      72,   115,   116,   118,   119,   123,   126,    12,   131,   147,
+     147,   147,   111,    77,    38,    12,   147,    34,    34,   156,
+      34,    34,    34,    34,    34,    34,   152,   159,    13,    14,
+      15,    16,    45,   139,   140,   141,   142,    46,    12,    91,
+     112,    12,    93,     7,    34,    82,   132,   133,   135,    12,
+     147,   147,   147,   147,   147,    63,    45,    45,    45,    33,
+     113,   106,    35,   157,   147,   147,   155,   154,   153,   147,
+     147,    91,   147,    34,   148,   149,   150,   151,   147,   104,
+     147,     4,    50,    87,    88,    89,    91,   138,   146,    94,
+      33,   109,   147,    34,   132,   132,    28,    29,    58,   130,
+     147,   146,    33,   124,   147,   147,   147,   147,   139,   102,
+      33,   147,    35,   147,   147,   147,    35,    35,    35,    35,
+     147,   147,   147,   147,   147,    45,    46,   144,   145,    34,
+      34,    34,    34,    13,    34,   138,    33,    45,   147,    35,
+     132,   132,   102,    33,    39,    40,    41,    42,   137,    33,
+     121,    45,    45,    93,    93,   107,   158,    35,    35,    35,
+      35,   145,   138,   147,   147,   146,   146,   146,   146,   143,
+     110,   147,    35,   134,   136,   147,   125,   127,   147,   147,
+     147,    35,   138,   147,    35,    45,    45,    45,   147,   147,
+     147,   146,    63,   147,   147,   147,   147,   147,    35,   122,
+      45,    35,    35,   147,   147,    35
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    91,    92,    93,    92,    92,    95,    94,    96,    94,
-      98,    97,    99,    97,   100,   101,   102,    97,   103,   104,
-     105,    97,   106,    97,   107,    97,    97,    97,    97,    97,
-      97,    97,    97,    97,    97,   108,    97,   109,    97,   110,
-      97,   111,    97,    97,   112,    97,   113,    97,    97,    97,
-      97,    97,    97,    97,    97,   114,   115,   116,    97,    97,
-      97,    97,    97,    97,   117,   118,   119,    97,   120,   121,
-      97,    97,    97,    97,    97,   122,   122,   124,   125,   123,
-     123,   123,   123,   123,   123,   123,   126,   126,   126,   127,
-     127,   127,   127,   127,   128,   127,   129,   129,   131,   130,
-     132,   130,   133,   130,   134,   130,   135,   130,   130,   130,
-     130,   136,   130,   137,   130,   130,   138,   130,   130,   139,
-     130,   130,   140,   141,   130,   142,   130
+       0,    96,    97,    98,    97,    97,   100,    99,   101,    99,
+     103,   104,   102,   105,   106,   107,   102,   108,   109,   110,
+     102,   111,   102,   112,   102,   113,   102,   102,   102,   102,
+     102,   102,   102,   102,   102,   102,   114,   102,   115,   102,
+     116,   102,   117,   102,   102,   118,   102,   119,   102,   102,
+     102,   102,   102,   102,   102,   102,   120,   121,   122,   102,
+     102,   102,   102,   102,   102,   123,   124,   125,   102,   126,
+     127,   102,   102,   102,   102,   102,   102,   102,   102,   128,
+     128,   129,   129,   130,   130,   131,   131,   133,   134,   132,
+     132,   132,   132,   132,   132,   135,   136,   132,   137,   137,
+     137,   137,   137,   138,   138,   138,   138,   138,   138,   140,
+     139,   141,   139,   142,   143,   139,   144,   144,   144,   144,
+     144,   145,   145,   146,   146,   148,   147,   149,   147,   150,
+     147,   151,   147,   152,   147,   147,   147,   147,   147,   153,
+     147,   154,   147,   147,   155,   147,   147,   156,   147,   147,
+     157,   158,   147,   159,   147
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_int8 yyr2[] =
 {
        0,     2,     0,     0,     4,     2,     0,     3,     0,     2,
-       0,     3,     0,     3,     0,     0,     0,     6,     0,     0,
-       0,     7,     0,     4,     0,     4,     1,     1,     1,     1,
-       2,     2,     2,     2,     1,     0,     5,     0,     3,     0,
-       3,     0,     3,     2,     0,     3,     0,     3,     1,     1,
-       2,     1,     4,     4,     2,     0,     0,     0,     9,     1,
-       2,     2,     1,     1,     0,     0,     0,     7,     0,     0,
-       7,     6,     6,     2,     1,     1,     3,     0,     0,     5,
-       4,     3,     3,     3,     2,     3,     1,     1,     1,     1,
-       3,     8,     6,     6,     0,     5,     1,     1,     0,     4,
-       0,     4,     0,     4,     0,     4,     0,     4,     1,     1,
-       1,     0,     5,     0,     5,     4,     0,     5,     4,     0,
-       3,     4,     0,     0,     6,     0,     5
+       0,     0,     5,     0,     0,     0,     6,     0,     0,     0,
+       7,     0,     4,     0,     5,     0,     4,     1,     1,     1,
+       1,     1,     1,     2,     2,     1,     0,     5,     0,     3,
+       0,     3,     0,     3,     3,     0,     3,     0,     3,     1,
+       1,     2,     1,     4,     4,     2,     0,     0,     0,     9,
+       2,     2,     2,     1,     1,     0,     0,     0,     7,     0,
+       0,     7,     6,     6,     2,     6,     1,     1,     1,     0,
+       1,     0,     2,     0,     1,     1,     3,     0,     0,     5,
+       4,     3,     3,     3,     2,     0,     0,     5,     1,     1,
+       1,     1,     1,     1,     3,     8,     6,     6,     4,     0,
+       2,     0,     2,     0,     0,     6,     0,     2,     2,     3,
+       3,     1,     1,     1,     1,     0,     4,     0,     4,     0,
+       4,     0,     4,     0,     4,     1,     1,     1,     4,     0,
+       5,     0,     5,     4,     0,     5,     4,     0,     3,     4,
+       0,     0,     6,     0,     5
 };
 
 
@@ -1587,94 +1654,74 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* pgm: %empty  */
-#line 147 "grsoft.y"
+#line 155 "grsoft.y"
 { printf("]"); }
-#line 1593 "grsoft.tab.c"
+#line 1660 "grsoft.tab.c"
     break;
 
   case 3: /* $@1: %empty  */
-#line 148 "grsoft.y"
+#line 156 "grsoft.y"
             { printf("]"); strcpy(chars,"");strcpy(string,""); }
-#line 1599 "grsoft.tab.c"
+#line 1666 "grsoft.tab.c"
     break;
 
   case 5: /* pgm: pgm CR  */
-#line 149 "grsoft.y"
+#line 157 "grsoft.y"
           { printf("]"); strcpy(chars,""); }
-#line 1605 "grsoft.tab.c"
+#line 1672 "grsoft.tab.c"
     break;
 
   case 6: /* $@2: %empty  */
-#line 152 "grsoft.y"
+#line 160 "grsoft.y"
              { im=0; l=atoi(yytext); strcpy(lines[l],""); }
-#line 1611 "grsoft.tab.c"
+#line 1678 "grsoft.tab.c"
     break;
 
   case 7: /* line: NUMBER $@2 inst  */
-#line 152 "grsoft.y"
+#line 160 "grsoft.y"
                                                                  { if (!im&&!infor) strcat(lines[l],";"); else infor=0;  }
-#line 1617 "grsoft.tab.c"
+#line 1684 "grsoft.tab.c"
     break;
 
   case 8: /* $@3: %empty  */
-#line 153 "grsoft.y"
+#line 161 "grsoft.y"
         { im=1; }
-#line 1623 "grsoft.tab.c"
+#line 1690 "grsoft.tab.c"
     break;
 
   case 10: /* $@4: %empty  */
-#line 156 "grsoft.y"
-            { if (!im) sprintf(lines[l],"%sprintf(\"%%g\\n\",",lines[l]); }
-#line 1629 "grsoft.tab.c"
+#line 164 "grsoft.y"
+            { if (!im) strcat(lines[l],"printf(\"%"); }
+#line 1696 "grsoft.tab.c"
     break;
 
-  case 11: /* inst: PRINT $@4 expr  */
-#line 156 "grsoft.y"
-                                                                                 { if (im) printf("%g\n",yyvsp[0]);  else sprintf(lines[l],"%s)",lines[l]); }
-#line 1635 "grsoft.tab.c"
-    break;
-
-  case 12: /* $@5: %empty  */
-#line 157 "grsoft.y"
-         { if (!im) strcat(lines[l],"printf(\"%s\\n\","); }
-#line 1641 "grsoft.tab.c"
-    break;
-
-  case 13: /* inst: PRINT $@5 sexpr  */
-#line 157 "grsoft.y"
-                                                                  { if (!im) strcat(lines[l],")"); else {
-	D=root;
-	while (D) {
-		if (strcmp(D->name,identifier)==0)
-			strcpy(string,D->value);
-		D=D->next;
-	}
-	printf("%s\n",string);
-}
+  case 11: /* $@5: %empty  */
+#line 164 "grsoft.y"
+                                                                   { if (!im) strcat(lines[l],")"); 
  }
-#line 1656 "grsoft.tab.c"
+#line 1703 "grsoft.tab.c"
     break;
 
-  case 14: /* $@6: %empty  */
-#line 167 "grsoft.y"
+  case 13: /* $@6: %empty  */
+#line 166 "grsoft.y"
    { notdef=1; }
-#line 1662 "grsoft.tab.c"
+#line 1709 "grsoft.tab.c"
     break;
 
-  case 15: /* $@7: %empty  */
-#line 167 "grsoft.y"
+  case 14: /* $@7: %empty  */
+#line 166 "grsoft.y"
                             { d=r; while(d) { if (strcmp(d->name,identifier)==0) notdef=0; d=d->next; } if (notdef&&!im) strcat(lines[l],"float "); strcpy(a,identifier); }
-#line 1668 "grsoft.tab.c"
+#line 1715 "grsoft.tab.c"
     break;
 
-  case 16: /* $@8: %empty  */
-#line 167 "grsoft.y"
+  case 15: /* $@8: %empty  */
+#line 166 "grsoft.y"
                                                                                                                                                                                   { if (!im) sprintf(lines[l],"%s%s=",lines[l],identifier);  }
-#line 1674 "grsoft.tab.c"
+#line 1721 "grsoft.tab.c"
     break;
 
-  case 17: /* inst: $@6 IDENTIFIER $@7 EQUAL $@8 expr  */
-#line 167 "grsoft.y"
+  case 16: /* inst: $@6 IDENTIFIER $@7 EQUAL $@8 expr  */
+#line 166 "grsoft.y"
                                                                                                                                                                                                                                                     { 
 	if (notdef) {
 		d=(struct var*)malloc(sizeof(struct var));
@@ -1683,73 +1730,90 @@ yyreduce:
 		if (im) d->value=yyvsp[0];
 	}
 }
-#line 1687 "grsoft.tab.c"
+#line 1734 "grsoft.tab.c"
     break;
 
-  case 18: /* $@9: %empty  */
-#line 177 "grsoft.y"
+  case 17: /* $@9: %empty  */
+#line 176 "grsoft.y"
        { notdef=1; }
-#line 1693 "grsoft.tab.c"
+#line 1740 "grsoft.tab.c"
     break;
 
-  case 19: /* $@10: %empty  */
-#line 177 "grsoft.y"
+  case 18: /* $@10: %empty  */
+#line 176 "grsoft.y"
                                 { if (!im&&notdef) strcat(lines[l],"float "); d=r; strcpy(a,identifier); while (d) { if (strcmp(d->name,identifier)==0) { notdef=0; break; } d=d->next; } }
-#line 1699 "grsoft.tab.c"
+#line 1746 "grsoft.tab.c"
     break;
 
-  case 20: /* $@11: %empty  */
-#line 177 "grsoft.y"
+  case 19: /* $@11: %empty  */
+#line 176 "grsoft.y"
                                                                                                                                                                                                   { if (!im) sprintf(lines[l],"%s%s=",lines[l],identifier);  }
-#line 1705 "grsoft.tab.c"
+#line 1752 "grsoft.tab.c"
     break;
 
-  case 21: /* inst: LET $@9 IDENTIFIER $@10 EQUAL $@11 expr  */
-#line 177 "grsoft.y"
-                                                                                                                                                                                                                                                                    { 
+  case 20: /* inst: LET $@9 IDENTIFIER $@10 EQUAL $@11 expr  */
+#line 176 "grsoft.y"
+                                                                                                                                                                                                                                                                    { if (im) {
 	if (notdef) {
 		d=(struct var*)malloc(sizeof(struct var));
 		d->value=yyvsp[0]; strcpy(d->name,a); d->next=r; r=d;
 	} else
 		d->value=yyvsp[0];
+} 
 }
-#line 1717 "grsoft.tab.c"
+#line 1765 "grsoft.tab.c"
     break;
 
-  case 22: /* $@12: %empty  */
+  case 21: /* $@12: %empty  */
 #line 184 "grsoft.y"
           { if (im) strcpy(A,yytext); }
-#line 1723 "grsoft.tab.c"
+#line 1771 "grsoft.tab.c"
     break;
 
-  case 23: /* inst: STRING $@12 EQUAL sexpr  */
+  case 22: /* inst: STRING $@12 EQUAL multi_expr  */
 #line 184 "grsoft.y"
-                                                     { if (im) {
+                                                          { if (im) {
 	D=(struct str*)malloc(sizeof(struct str));
-	strcpy(D->value,string);strcpy(D->name,A); D->next=root; root=D;	
-} else {
+	strcpy(D->value,string);strcpy(D->name,A); D->next=root; root=D;	} else {
 	sprintf(lines[l],"char * %s = %s",identifier,chars);
 }
 }
-#line 1735 "grsoft.tab.c"
+#line 1782 "grsoft.tab.c"
     break;
 
-  case 24: /* $@13: %empty  */
-#line 191 "grsoft.y"
+  case 23: /* $@13: %empty  */
+#line 190 "grsoft.y"
+              { if (im) strcpy(A,yytext); }
+#line 1788 "grsoft.tab.c"
+    break;
+
+  case 24: /* inst: LET STRING $@13 EQUAL sexpr  */
+#line 190 "grsoft.y"
+                                                         { if (im) {
+	D=(struct str*)malloc(sizeof(struct str));
+	strcpy(D->value,string);strcpy(D->name,A); D->next=root; root=D;	} else {
+	sprintf(lines[l],"char * %s = %s",identifier,chars);
+}
+}
+#line 1799 "grsoft.tab.c"
+    break;
+
+  case 25: /* $@14: %empty  */
+#line 196 "grsoft.y"
            { if (!im) sprintf(lines[l],"%s;",lines[l]); }
-#line 1741 "grsoft.tab.c"
+#line 1805 "grsoft.tab.c"
     break;
 
-  case 26: /* inst: LIST  */
-#line 192 "grsoft.y"
+  case 27: /* inst: LIST  */
+#line 197 "grsoft.y"
         {
-	if (im) for(int i=0;i<65536;i++) if (strcmp(lines[i],"")) printf("%d %s\n",i,lines[i]);
+	if (im) { int i; for(i=0;i<65536;i++) if (strcmp(lines[i],"")) printf("%d %s\n",i,lines[i]); }
  }
-#line 1749 "grsoft.tab.c"
+#line 1813 "grsoft.tab.c"
     break;
 
-  case 27: /* inst: RUN  */
-#line 195 "grsoft.y"
+  case 28: /* inst: RUN  */
+#line 200 "grsoft.y"
        { if (im) {
 	struct timeval * tv1;
 	struct timeval * tv2;
@@ -1773,22 +1837,22 @@ yyreduce:
 	if (trace) {
 		gettimeofday(tv2,NULL);
 		diff=tv2->tv_sec - tv1->tv_sec;
-		printf("µsec=%d\n",(int)(diff*1000000 + tv2->tv_usec - tv1->tv_usec));
+		printf("\nµsec=%d\n",(int)(diff*1000000 + tv2->tv_usec - tv1->tv_usec));
 	}
 	
  }
 }
-#line 1782 "grsoft.tab.c"
+#line 1846 "grsoft.tab.c"
     break;
 
-  case 28: /* inst: SYSTEM  */
-#line 223 "grsoft.y"
+  case 29: /* inst: SYSTEM  */
+#line 228 "grsoft.y"
           { if (im) exit(0); else sprintf(lines[l],"%s exit(0)",lines[l]); }
-#line 1788 "grsoft.tab.c"
+#line 1852 "grsoft.tab.c"
     break;
 
-  case 29: /* inst: DUMP  */
-#line 224 "grsoft.y"
+  case 30: /* inst: DUMP  */
+#line 229 "grsoft.y"
         { if (im) {
 	struct var *d =r;
 	struct str *D=root;
@@ -1802,107 +1866,113 @@ yyreduce:
 	}
  }
 }
-#line 1806 "grsoft.tab.c"
+#line 1870 "grsoft.tab.c"
     break;
 
-  case 30: /* inst: TRACE ON  */
-#line 237 "grsoft.y"
-            { trace=1; }
-#line 1812 "grsoft.tab.c"
-    break;
-
-  case 31: /* inst: TRACE OFF  */
-#line 238 "grsoft.y"
-             { trace=0; }
-#line 1818 "grsoft.tab.c"
-    break;
-
-  case 32: /* inst: DEBUG ON  */
-#line 239 "grsoft.y"
-            { yydebug=1; }
-#line 1824 "grsoft.tab.c"
-    break;
-
-  case 33: /* inst: DEBUG OFF  */
-#line 240 "grsoft.y"
-             { yydebug=0; }
-#line 1830 "grsoft.tab.c"
-    break;
-
-  case 35: /* $@14: %empty  */
+  case 31: /* inst: TRACE  */
 #line 242 "grsoft.y"
-      { sprintf(lines[l],"%sif ",lines[l]);}
-#line 1836 "grsoft.tab.c"
+         { trace=1; }
+#line 1876 "grsoft.tab.c"
     break;
 
-  case 37: /* $@15: %empty  */
+  case 32: /* inst: NOTRACE  */
 #line 243 "grsoft.y"
-        { sprintf(lines[l],"%s%s",lines[l],"goto L"); }
-#line 1842 "grsoft.tab.c"
+           { trace=0; }
+#line 1882 "grsoft.tab.c"
     break;
 
-  case 39: /* $@16: %empty  */
+  case 33: /* inst: DEBUG ON  */
 #line 244 "grsoft.y"
-         { if (!im) strcat(lines[l],"if (!setjmp(buf)) goto L"); }
-#line 1848 "grsoft.tab.c"
+            { yydebug=1; }
+#line 1888 "grsoft.tab.c"
     break;
 
-  case 41: /* $@17: %empty  */
+  case 34: /* inst: DEBUG OFF  */
 #line 245 "grsoft.y"
-         { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); }
-#line 1854 "grsoft.tab.c"
+             { yydebug=0; }
+#line 1894 "grsoft.tab.c"
     break;
 
-  case 42: /* inst: INPUT $@17 IDENTIFIER  */
-#line 245 "grsoft.y"
-                                                                                { if (!im) sprintf(lines[l],"%s%s=atof(s)",lines[l],identifier); else fprintf(stderr,"NO DIRECT COMMAND\n"); }
-#line 1860 "grsoft.tab.c"
-    break;
-
-  case 43: /* inst: INPUT STRING  */
-#line 246 "grsoft.y"
-                { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); }
-#line 1866 "grsoft.tab.c"
-    break;
-
-  case 44: /* $@18: %empty  */
+  case 36: /* $@15: %empty  */
 #line 247 "grsoft.y"
-        { if (!im) sprintf(lines[l],"%sprintf(\"%%c[%d;",lines[l],cx); }
-#line 1872 "grsoft.tab.c"
+      { sprintf(lines[l],"%sif ",lines[l]);}
+#line 1900 "grsoft.tab.c"
     break;
 
-  case 45: /* inst: HTAB $@18 expr  */
-#line 247 "grsoft.y"
-                                                                              { if (!im) sprintf(lines[l],"%sH\",27)",lines[l]); }
-#line 1878 "grsoft.tab.c"
-    break;
-
-  case 46: /* $@19: %empty  */
+  case 38: /* $@16: %empty  */
 #line 248 "grsoft.y"
-        { if (!im) strcat(lines[l],"printf(\"%c["); }
-#line 1884 "grsoft.tab.c"
+        { sprintf(lines[l],"%s%s",lines[l],"goto L"); }
+#line 1906 "grsoft.tab.c"
     break;
 
-  case 47: /* inst: VTAB $@19 expr  */
-#line 248 "grsoft.y"
-                                                           { if (!im) sprintf(lines[l],"%s;%dH\",27)",lines[l],cy); }
-#line 1890 "grsoft.tab.c"
-    break;
-
-  case 48: /* inst: HOME  */
+  case 40: /* $@17: %empty  */
 #line 249 "grsoft.y"
-        { if (im) printf("%c[2J",27); else strcat (lines[l],"printf(\"%c[2J\",27)");   }
-#line 1896 "grsoft.tab.c"
+         { if (!im) strcat(lines[l],"if (!setjmp(buf)) goto L"); }
+#line 1912 "grsoft.tab.c"
     break;
 
-  case 49: /* inst: TEXT  */
+  case 42: /* $@18: %empty  */
 #line 250 "grsoft.y"
-        { if (im) { SDL_Quit(); hgr=0; } }
-#line 1902 "grsoft.tab.c"
+         { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); }
+#line 1918 "grsoft.tab.c"
     break;
 
-  case 51: /* inst: HGR  */
+  case 43: /* inst: INPUT $@18 IDENTIFIER  */
+#line 250 "grsoft.y"
+                                                                                { if (!im) sprintf(lines[l],"%s%s=atof(s)",lines[l],identifier); else fprintf(stderr,"NO DIRECT COMMAND\n"); }
+#line 1924 "grsoft.tab.c"
+    break;
+
+  case 44: /* inst: INPUT opt_prompt STRING  */
+#line 251 "grsoft.y"
+                           { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); }
+#line 1930 "grsoft.tab.c"
+    break;
+
+  case 45: /* $@19: %empty  */
 #line 252 "grsoft.y"
+        { if (!im) sprintf(lines[l],"%sprintf(\"%%c[%d;",lines[l],cx); }
+#line 1936 "grsoft.tab.c"
+    break;
+
+  case 46: /* inst: HTAB $@19 expr  */
+#line 252 "grsoft.y"
+                                                                              { if (!im) sprintf(lines[l],"%sH\",27)",lines[l]); }
+#line 1942 "grsoft.tab.c"
+    break;
+
+  case 47: /* $@20: %empty  */
+#line 253 "grsoft.y"
+        { if (!im) strcat(lines[l],"printf(\"%c["); }
+#line 1948 "grsoft.tab.c"
+    break;
+
+  case 48: /* inst: VTAB $@20 expr  */
+#line 253 "grsoft.y"
+                                                           { if (!im) sprintf(lines[l],"%s;%dH\",27)",lines[l],cy); }
+#line 1954 "grsoft.tab.c"
+    break;
+
+  case 49: /* inst: HOME  */
+#line 254 "grsoft.y"
+        { if (im)
+#ifdef WIN32
+system("cls");
+#else /* ANSI */
+printf("%c[2J",27);
+#endif
+else strcat (lines[l],"printf(\"%c[2J\",27)");   }
+#line 1966 "grsoft.tab.c"
+    break;
+
+  case 50: /* inst: TEXT  */
+#line 261 "grsoft.y"
+        { if (im) { SDL_Quit(); hgr=0; } }
+#line 1972 "grsoft.tab.c"
+    break;
+
+  case 52: /* inst: HGR  */
+#line 263 "grsoft.y"
        { if (im) {
 hgr=1;
 if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS )) fprintf(stderr, "Echec SDL retour au mode texte (%s)", SDL_GetError());
@@ -1912,7 +1982,7 @@ if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS )) fprintf(stderr, "Echec SDL reto
                SDL_RenderClear(renderer);
 
                SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-
+                SDL_QueryTexture(sprite, NULL, NULL, &pos.w, &pos.h);
 	}
 } else {
 	hgr=1;
@@ -1924,258 +1994,366 @@ if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS )) fprintf(stderr, "Echec SDL reto
         strcat(lines[l],"SDL_SetRenderDrawColor(renderer,255,255,255,SDL_ALPHA_OPAQUE);\n } else fprintf(stderr,\"Erreur SDL\")\n");
 }
  }
-#line 1928 "grsoft.tab.c"
-    break;
-
-  case 55: /* $@20: %empty  */
-#line 276 "grsoft.y"
-       { infor = 1; }
-#line 1934 "grsoft.tab.c"
+#line 1998 "grsoft.tab.c"
     break;
 
   case 56: /* $@21: %empty  */
-#line 276 "grsoft.y"
-                                       { strcat(lines[l],"for(I="); }
-#line 1940 "grsoft.tab.c"
+#line 287 "grsoft.y"
+       { infor = 1; }
+#line 2004 "grsoft.tab.c"
     break;
 
   case 57: /* $@22: %empty  */
-#line 276 "grsoft.y"
+#line 287 "grsoft.y"
+                                       { strcat(lines[l],"for(I="); }
+#line 2010 "grsoft.tab.c"
+    break;
+
+  case 58: /* $@23: %empty  */
+#line 287 "grsoft.y"
                                                                               { strcat(lines[l],";I<="); }
-#line 1946 "grsoft.tab.c"
+#line 2016 "grsoft.tab.c"
     break;
 
-  case 58: /* inst: FOR $@20 IDENTIFIER EQUAL $@21 expr TO $@22 expr  */
-#line 276 "grsoft.y"
+  case 59: /* inst: FOR $@21 IDENTIFIER EQUAL $@22 expr TO $@23 expr  */
+#line 287 "grsoft.y"
                                                                                                                 { strcat(lines[l],";I++) {"); }
-#line 1952 "grsoft.tab.c"
+#line 2022 "grsoft.tab.c"
     break;
 
-  case 59: /* inst: NEXT  */
-#line 277 "grsoft.y"
-        { if (!im) strcat(lines[l],"}"); }
-#line 1958 "grsoft.tab.c"
+  case 60: /* inst: NEXT opt_i  */
+#line 288 "grsoft.y"
+              { if (!im) strcat(lines[l],"}"); }
+#line 2028 "grsoft.tab.c"
     break;
 
-  case 62: /* inst: RETURN  */
-#line 280 "grsoft.y"
+  case 63: /* inst: RETURN  */
+#line 291 "grsoft.y"
           { if (!im) strcat(lines[l],"longjmp(buf,1)"); }
-#line 1964 "grsoft.tab.c"
+#line 2034 "grsoft.tab.c"
     break;
 
-  case 63: /* inst: END  */
-#line 281 "grsoft.y"
+  case 64: /* inst: END  */
+#line 292 "grsoft.y"
        { if (!im) strcat(lines[l],"return"); else return 0;  }
-#line 1970 "grsoft.tab.c"
-    break;
-
-  case 64: /* $@23: %empty  */
-#line 282 "grsoft.y"
-         { if (!im) strcat(lines[l],"hplot(renderer,(int)("); }
-#line 1976 "grsoft.tab.c"
+#line 2040 "grsoft.tab.c"
     break;
 
   case 65: /* $@24: %empty  */
-#line 282 "grsoft.y"
-                                                                     { if(im) b1=atoi(yytext); }
-#line 1982 "grsoft.tab.c"
+#line 293 "grsoft.y"
+         { if (!im) strcat(lines[l],"hplot(renderer,(int)("); }
+#line 2046 "grsoft.tab.c"
     break;
 
   case 66: /* $@25: %empty  */
-#line 282 "grsoft.y"
+#line 293 "grsoft.y"
+                                                                     { if(im) b1=atoi(yytext); }
+#line 2052 "grsoft.tab.c"
+    break;
+
+  case 67: /* $@26: %empty  */
+#line 293 "grsoft.y"
                                                                                                        { if (!im) strcat(lines[l],"),(int)("); }
-#line 1988 "grsoft.tab.c"
+#line 2058 "grsoft.tab.c"
     break;
 
-  case 67: /* inst: HPLOT $@23 expr $@24 COMMA $@25 expr  */
-#line 282 "grsoft.y"
+  case 68: /* inst: HPLOT $@24 expr $@25 COMMA $@26 expr  */
+#line 293 "grsoft.y"
                                                                                                                                                       { b2=atoi(yytext); if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }
-#line 1994 "grsoft.tab.c"
-    break;
-
-  case 68: /* $@26: %empty  */
-#line 283 "grsoft.y"
-         { if (!im) strcat(lines[l],"SDL_RenderDrawLine(renderer,b1,b2,(int)("); }
-#line 2000 "grsoft.tab.c"
+#line 2064 "grsoft.tab.c"
     break;
 
   case 69: /* $@27: %empty  */
-#line 283 "grsoft.y"
+#line 294 "grsoft.y"
+         { if (!im) strcat(lines[l],"SDL_RenderDrawLine(renderer,b1,b2,(int)("); }
+#line 2070 "grsoft.tab.c"
+    break;
+
+  case 70: /* $@28: %empty  */
+#line 294 "grsoft.y"
                                                                                                  { if (!im) strcat(lines[l],"),(int)("); }
-#line 2006 "grsoft.tab.c"
+#line 2076 "grsoft.tab.c"
     break;
 
-  case 70: /* inst: HPLOT $@26 TO expr COMMA $@27 expr  */
-#line 283 "grsoft.y"
+  case 71: /* inst: HPLOT $@27 TO expr COMMA $@28 expr  */
+#line 294 "grsoft.y"
                                                                                                                                                 { if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }
-#line 2012 "grsoft.tab.c"
+#line 2082 "grsoft.tab.c"
     break;
 
-  case 73: /* inst: SAVE IDENTIFIER  */
-#line 286 "grsoft.y"
+  case 74: /* inst: SAVE IDENTIFIER  */
+#line 297 "grsoft.y"
                    {
 	if (im) {
 		FILE * fp;
+		int i;
 		fp=fopen(identifier,"w");
-		for(int i=0;i<65536;i++) if (strcmp(lines[i],"")) fprintf(fp,"L%d: %s\n",i,lines[i]);
+		for(i=0;i<65536;i++) if (strcmp(lines[i],"")) fprintf(fp,"L%d: %s\n",i,lines[i]);
 		fclose(fp);
  }
  }
-#line 2025 "grsoft.tab.c"
+#line 2096 "grsoft.tab.c"
     break;
 
-  case 74: /* inst: NEW  */
-#line 294 "grsoft.y"
-       { for(int i=0;i<65536;i++) strcpy(lines[i],""); }
-#line 2031 "grsoft.tab.c"
-    break;
-
-  case 77: /* $@28: %empty  */
-#line 313 "grsoft.y"
-      { sprintf(lines[l],"%s ( ",lines[l]); }
-#line 2037 "grsoft.tab.c"
-    break;
-
-  case 78: /* $@29: %empty  */
-#line 313 "grsoft.y"
-                                                        { sprintf(lines[l],"%s %s ",lines[l],oper); }
-#line 2043 "grsoft.tab.c"
-    break;
-
-  case 79: /* cond: $@28 expr oper $@29 expr  */
-#line 313 "grsoft.y"
-                                                                                                           { sprintf(lines[l],"%s ) ",lines[l]); }
-#line 2049 "grsoft.tab.c"
-    break;
-
-  case 85: /* cond: string EQUAL string  */
-#line 319 "grsoft.y"
-                              { if (!im) sprintf(lines[l],"%s(strcmp(s,%s)==0) ",lines[l],chars); }
-#line 2055 "grsoft.tab.c"
-    break;
-
-  case 86: /* oper: EQUAL  */
-#line 322 "grsoft.y"
-            { strcpy(oper,"=="); }
-#line 2061 "grsoft.tab.c"
-    break;
-
-  case 87: /* oper: PG  */
-#line 323 "grsoft.y"
-             { strcpy(oper,">"); }
-#line 2067 "grsoft.tab.c"
-    break;
-
-  case 88: /* oper: PP  */
-#line 324 "grsoft.y"
-             { strcpy(oper,"<"); }
-#line 2073 "grsoft.tab.c"
-    break;
-
-  case 90: /* sexpr: sexpr PLUS string  */
-#line 328 "grsoft.y"
-                            { if (im) strcat(string,chars); }
-#line 2079 "grsoft.tab.c"
-    break;
-
-  case 94: /* $@30: %empty  */
-#line 332 "grsoft.y"
-                 { if (!im) strcat(lines[l],"(int)"); }
-#line 2085 "grsoft.tab.c"
-    break;
-
-  case 95: /* sexpr: CHR PO $@30 expr PF  */
-#line 332 "grsoft.y"
-                                                                { if (im) printf("%c",(int)yyvsp[-1]); }
-#line 2091 "grsoft.tab.c"
-    break;
-
-  case 96: /* string: STRING  */
-#line 335 "grsoft.y"
-               { if (im) strcpy(identifier,yytext); else sprintf(lines[l],"%s%s",lines[l],identifier); }
-#line 2097 "grsoft.tab.c"
-    break;
-
-  case 97: /* string: CHARS  */
-#line 336 "grsoft.y"
-                { if (!im) strcat(lines[l],chars); else strcpy(string,chars+1);string[strlen(string)-1]=0; }
+  case 75: /* inst: DRAW expr AT expr COMMA expr  */
+#line 306 "grsoft.y"
+                                { if (im) { pos.x=(int)yyvsp[-2]; pos.y=(int)yyvsp[0]; SDL_RenderCopy(renderer,sprite,NULL,&pos); SDL_RenderPresent(renderer);
+ } }
 #line 2103 "grsoft.tab.c"
     break;
 
-  case 98: /* $@31: %empty  */
-#line 339 "grsoft.y"
-                { if (!im) strcat(lines[l],"+"); }
+  case 76: /* inst: NEW  */
+#line 308 "grsoft.y"
+       { int i; for(i=0;i<65536;i++) strcpy(lines[i],""); }
 #line 2109 "grsoft.tab.c"
     break;
 
-  case 99: /* expr: expr PLUS $@31 expr  */
-#line 339 "grsoft.y"
-                                                        { if (im) yyval=yyvsp[-3]+yyvsp[0]; }
+  case 77: /* inst: CLEAR  */
+#line 309 "grsoft.y"
+         { if (im) { r=NULL; root=NULL; } }
 #line 2115 "grsoft.tab.c"
     break;
 
-  case 100: /* $@32: %empty  */
-#line 340 "grsoft.y"
-              { if (!im) strcat(lines[l],"-"); }
+  case 82: /* opt_prompt: CHARS SEMICOLOMN  */
+#line 330 "grsoft.y"
+                             { if (!im) sprintf(lines[l],"%sprintf(%s);",lines[l],chars); }
 #line 2121 "grsoft.tab.c"
     break;
 
-  case 101: /* expr: expr MINUS $@32 expr  */
-#line 340 "grsoft.y"
-                                                      { if (im) yyval=yyvsp[-3]-yyvsp[0]; }
+  case 87: /* $@29: %empty  */
+#line 341 "grsoft.y"
+      { sprintf(lines[l],"%s ( ",lines[l]); }
 #line 2127 "grsoft.tab.c"
     break;
 
-  case 102: /* $@33: %empty  */
+  case 88: /* $@30: %empty  */
 #line 341 "grsoft.y"
-                 { if (!im) strcat(lines[l],"*"); }
+                                                        { sprintf(lines[l],"%s %s ",lines[l],oper); }
 #line 2133 "grsoft.tab.c"
     break;
 
-  case 103: /* expr: expr ASTERISK $@33 expr  */
+  case 89: /* cond: $@29 expr oper $@30 expr  */
 #line 341 "grsoft.y"
-                                                         { if (im) yyval=yyvsp[-3]*yyvsp[0]; }
+                                                                                                           { sprintf(lines[l],"%s ) ",lines[l]); }
 #line 2139 "grsoft.tab.c"
     break;
 
-  case 104: /* $@34: %empty  */
-#line 342 "grsoft.y"
-                { if (!im) strcat(lines[l],"/"); }
+  case 95: /* $@31: %empty  */
+#line 347 "grsoft.y"
+          { if (!im) strcat(lines[l],"(strcmp("); }
 #line 2145 "grsoft.tab.c"
     break;
 
-  case 105: /* expr: expr DIVIDE $@34 expr  */
-#line 342 "grsoft.y"
-                                                        { if (im) yyval=yyvsp[-3]/yyvsp[0]; }
+  case 96: /* $@32: %empty  */
+#line 347 "grsoft.y"
+                                                                 { if (!im) strcat(lines[l],","); }
 #line 2151 "grsoft.tab.c"
     break;
 
-  case 106: /* @35: %empty  */
-#line 343 "grsoft.y"
-      { if (!im) strcat(lines[l],"("); }
+  case 97: /* cond: $@31 string EQUAL $@32 string  */
+#line 347 "grsoft.y"
+                                                                                                           { if (!im) strcat(lines[l],")==0) "); }
 #line 2157 "grsoft.tab.c"
     break;
 
-  case 107: /* expr: PO @35 expr PF  */
-#line 343 "grsoft.y"
-                                                 { if (im) yyval=yyvsp[-2]; else strcat(lines[l],")"); }
+  case 98: /* oper: EQUAL  */
+#line 350 "grsoft.y"
+            { strcpy(oper,"=="); }
 #line 2163 "grsoft.tab.c"
     break;
 
-  case 108: /* expr: NUMBER  */
-#line 344 "grsoft.y"
-          { if (im) yyval=yyvsp[0]; else strcat(lines[l],yytext); }
+  case 99: /* oper: PG  */
+#line 351 "grsoft.y"
+             { strcpy(oper,">"); }
 #line 2169 "grsoft.tab.c"
     break;
 
-  case 109: /* expr: FLOAT  */
-#line 345 "grsoft.y"
-         { if (im) yyval=yyvsp[0]; else strcat(lines[l],yytext); }
+  case 100: /* oper: PP  */
+#line 352 "grsoft.y"
+             { strcpy(oper,"<"); }
 #line 2175 "grsoft.tab.c"
     break;
 
-  case 110: /* expr: IDENTIFIER  */
-#line 346 "grsoft.y"
+  case 101: /* oper: PE  */
+#line 353 "grsoft.y"
+             { strcpy(oper,"<="); }
+#line 2181 "grsoft.tab.c"
+    break;
+
+  case 102: /* oper: GE  */
+#line 354 "grsoft.y"
+             { strcpy(oper,">="); }
+#line 2187 "grsoft.tab.c"
+    break;
+
+  case 104: /* sexpr: sexpr PLUS string  */
+#line 358 "grsoft.y"
+                            { if (im) strcat(string,chars); }
+#line 2193 "grsoft.tab.c"
+    break;
+
+  case 106: /* sexpr: LEFT PO string COMMA expr PF  */
+#line 360 "grsoft.y"
+                                       { if (im) { chars[(int)yyvsp[-1]]=0;strcpy(string,chars); } }
+#line 2199 "grsoft.tab.c"
+    break;
+
+  case 108: /* sexpr: STR PO expr PF  */
+#line 362 "grsoft.y"
+                         { if (im) sprintf(string,"%d",(int)yyvsp[-1]); }
+#line 2205 "grsoft.tab.c"
+    break;
+
+  case 109: /* $@33: %empty  */
+#line 365 "grsoft.y"
+            { if (!im) strcat(lines[l],"g\","); }
+#line 2211 "grsoft.tab.c"
+    break;
+
+  case 110: /* multi_expr: $@33 expr  */
+#line 365 "grsoft.y"
+                                                       { if (im) {
+	d=r;
+	while (d) {
+		if (strcmp(d->name,identifier)==0)
+			printf("%g\n",d->value);
+		d=d->next;
+	}
+}
+}
+#line 2225 "grsoft.tab.c"
+    break;
+
+  case 111: /* $@34: %empty  */
+#line 374 "grsoft.y"
+          { if (!im) strcat(lines[l],"s\","); }
+#line 2231 "grsoft.tab.c"
+    break;
+
+  case 112: /* multi_expr: $@34 sexpr  */
+#line 374 "grsoft.y"
+                                                      { if (im) {
+	D=root;
+	while (D) {
+		if (strcmp(D->name,identifier)==0)
+			printf("%s\n",D->value);
+		D=D->next;
+	}
+}
+}
+#line 2245 "grsoft.tab.c"
+    break;
+
+  case 113: /* $@35: %empty  */
+#line 383 "grsoft.y"
+          { if (!im) strcat(lines[l],"c\","); }
+#line 2251 "grsoft.tab.c"
+    break;
+
+  case 114: /* $@36: %empty  */
+#line 383 "grsoft.y"
+                                                       { if (!im) strcat(lines[l],"(int)"); }
+#line 2257 "grsoft.tab.c"
+    break;
+
+  case 115: /* multi_expr: $@35 CHR PO $@36 expr PF  */
+#line 383 "grsoft.y"
+                                                                                                      { if (im) printf("%c",(int)yyvsp[-1]); }
+#line 2263 "grsoft.tab.c"
+    break;
+
+  case 116: /* opt_print: %empty  */
+#line 386 "grsoft.y"
+           { if (!im) strcat(lines[l],";printf(\"\\n\")"); }
+#line 2269 "grsoft.tab.c"
+    break;
+
+  case 123: /* string: STRING  */
+#line 397 "grsoft.y"
+               { if (im) strcpy(identifier,yytext); else sprintf(lines[l],"%s%s",lines[l],identifier); }
+#line 2275 "grsoft.tab.c"
+    break;
+
+  case 124: /* string: CHARS  */
+#line 398 "grsoft.y"
+                { if (!im) strcat(lines[l],chars); else strcpy(string,chars+1);string[strlen(string)-1]=0; }
+#line 2281 "grsoft.tab.c"
+    break;
+
+  case 125: /* $@37: %empty  */
+#line 401 "grsoft.y"
+                { if (!im) strcat(lines[l],"+"); }
+#line 2287 "grsoft.tab.c"
+    break;
+
+  case 126: /* expr: expr PLUS $@37 expr  */
+#line 401 "grsoft.y"
+                                                        { if (im) yyval=yyvsp[-3]+yyvsp[0]; }
+#line 2293 "grsoft.tab.c"
+    break;
+
+  case 127: /* $@38: %empty  */
+#line 402 "grsoft.y"
+              { if (!im) strcat(lines[l],"-"); }
+#line 2299 "grsoft.tab.c"
+    break;
+
+  case 128: /* expr: expr MINUS $@38 expr  */
+#line 402 "grsoft.y"
+                                                      { if (im) yyval=yyvsp[-3]-yyvsp[0]; }
+#line 2305 "grsoft.tab.c"
+    break;
+
+  case 129: /* $@39: %empty  */
+#line 403 "grsoft.y"
+                 { if (!im) strcat(lines[l],"*"); }
+#line 2311 "grsoft.tab.c"
+    break;
+
+  case 130: /* expr: expr ASTERISK $@39 expr  */
+#line 403 "grsoft.y"
+                                                         { if (im) yyval=yyvsp[-3]*yyvsp[0]; }
+#line 2317 "grsoft.tab.c"
+    break;
+
+  case 131: /* $@40: %empty  */
+#line 404 "grsoft.y"
+                { if (!im) strcat(lines[l],"/"); }
+#line 2323 "grsoft.tab.c"
+    break;
+
+  case 132: /* expr: expr DIVIDE $@40 expr  */
+#line 404 "grsoft.y"
+                                                        { if (im) yyval=yyvsp[-3]/yyvsp[0]; }
+#line 2329 "grsoft.tab.c"
+    break;
+
+  case 133: /* @41: %empty  */
+#line 405 "grsoft.y"
+      { if (!im) strcat(lines[l],"("); }
+#line 2335 "grsoft.tab.c"
+    break;
+
+  case 134: /* expr: PO @41 expr PF  */
+#line 405 "grsoft.y"
+                                                 { if (im) yyval=yyvsp[-2]; else strcat(lines[l],")"); }
+#line 2341 "grsoft.tab.c"
+    break;
+
+  case 135: /* expr: NUMBER  */
+#line 406 "grsoft.y"
+          { if (im) yyval=yyvsp[0]; else strcat(lines[l],yytext); }
+#line 2347 "grsoft.tab.c"
+    break;
+
+  case 136: /* expr: FLOAT  */
+#line 407 "grsoft.y"
+         { if (im) yyval=yyvsp[0]; else strcat(lines[l],yytext); }
+#line 2353 "grsoft.tab.c"
+    break;
+
+  case 137: /* expr: IDENTIFIER  */
+#line 408 "grsoft.y"
               { if (!im) {
 	strcat(lines[l],identifier);
 	struct var * c=r;
@@ -2198,71 +2376,71 @@ if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS )) fprintf(stderr, "Echec SDL reto
 	if (!fin) yyval=0;
 }
  }
-#line 2202 "grsoft.tab.c"
+#line 2380 "grsoft.tab.c"
     break;
 
-  case 111: /* $@36: %empty  */
-#line 368 "grsoft.y"
+  case 139: /* $@42: %empty  */
+#line 431 "grsoft.y"
           { if (!im) strcat(lines[l],"cos(");  }
-#line 2208 "grsoft.tab.c"
+#line 2386 "grsoft.tab.c"
     break;
 
-  case 112: /* expr: COS PO $@36 expr PF  */
-#line 368 "grsoft.y"
+  case 140: /* expr: COS PO $@42 expr PF  */
+#line 431 "grsoft.y"
                                                          { if (im) yyval=cos(yyvsp[-1]); else strcat(lines[l],")"); }
-#line 2214 "grsoft.tab.c"
+#line 2392 "grsoft.tab.c"
     break;
 
-  case 113: /* $@37: %empty  */
-#line 369 "grsoft.y"
+  case 141: /* $@43: %empty  */
+#line 432 "grsoft.y"
           { if (!im) strcat(lines[l],"sin(");  }
-#line 2220 "grsoft.tab.c"
+#line 2398 "grsoft.tab.c"
     break;
 
-  case 114: /* expr: SIN PO $@37 expr PF  */
-#line 369 "grsoft.y"
+  case 142: /* expr: SIN PO $@43 expr PF  */
+#line 432 "grsoft.y"
                                                          { if (im) yyval=sin(yyvsp[-1]); else strcat(lines[l],")"); }
-#line 2226 "grsoft.tab.c"
+#line 2404 "grsoft.tab.c"
     break;
 
-  case 115: /* expr: TAN PO expr PF  */
-#line 370 "grsoft.y"
+  case 143: /* expr: TAN PO expr PF  */
+#line 433 "grsoft.y"
                   { if (im) yyval=tan(yyvsp[-1]); }
-#line 2232 "grsoft.tab.c"
+#line 2410 "grsoft.tab.c"
     break;
 
-  case 116: /* $@38: %empty  */
-#line 371 "grsoft.y"
+  case 144: /* $@44: %empty  */
+#line 434 "grsoft.y"
           { if (!im) strcat(lines[l],"sqrt("); }
-#line 2238 "grsoft.tab.c"
+#line 2416 "grsoft.tab.c"
     break;
 
-  case 117: /* expr: SQR PO $@38 expr PF  */
-#line 371 "grsoft.y"
+  case 145: /* expr: SQR PO $@44 expr PF  */
+#line 434 "grsoft.y"
                                                          { if (im) yyval=sqrt(yyvsp[-1]); else strcat(lines[l],")"); }
-#line 2244 "grsoft.tab.c"
+#line 2422 "grsoft.tab.c"
     break;
 
-  case 118: /* expr: EXP PO expr PF  */
-#line 372 "grsoft.y"
+  case 146: /* expr: EXP PO expr PF  */
+#line 435 "grsoft.y"
                   { if (im) yyval=exp(yyvsp[-1]); }
-#line 2250 "grsoft.tab.c"
+#line 2428 "grsoft.tab.c"
     break;
 
-  case 119: /* $@39: %empty  */
-#line 373 "grsoft.y"
+  case 147: /* $@45: %empty  */
+#line 436 "grsoft.y"
          { if (!im) strcat(lines[l],"-"); }
-#line 2256 "grsoft.tab.c"
+#line 2434 "grsoft.tab.c"
     break;
 
-  case 120: /* expr: MINUS $@39 expr  */
-#line 373 "grsoft.y"
+  case 148: /* expr: MINUS $@45 expr  */
+#line 436 "grsoft.y"
                                                  { if (im) yyval=-yyvsp[0]; }
-#line 2262 "grsoft.tab.c"
+#line 2440 "grsoft.tab.c"
     break;
 
-  case 122: /* $@40: %empty  */
-#line 375 "grsoft.y"
+  case 150: /* $@46: %empty  */
+#line 438 "grsoft.y"
           { if (!im) 
 #ifdef WIN32
 strcat(lines[l],"rand()*");
@@ -2270,11 +2448,11 @@ strcat(lines[l],"rand()*");
 strcat(lines[l],"drand48()*");
 #endif
 }
-#line 2274 "grsoft.tab.c"
+#line 2452 "grsoft.tab.c"
     break;
 
-  case 123: /* @41: %empty  */
-#line 381 "grsoft.y"
+  case 151: /* @47: %empty  */
+#line 444 "grsoft.y"
        { if (im) 
 #ifdef WIN32
 yyval=rand()*yyvsp[0];
@@ -2282,23 +2460,23 @@ yyval=rand()*yyvsp[0];
 yyval=drand48()*yyvsp[0];
 #endif
 }
-#line 2286 "grsoft.tab.c"
+#line 2464 "grsoft.tab.c"
     break;
 
-  case 125: /* $@42: %empty  */
-#line 388 "grsoft.y"
+  case 153: /* $@48: %empty  */
+#line 451 "grsoft.y"
        { if (!im) strcat(lines[l],"roundf("); }
-#line 2292 "grsoft.tab.c"
+#line 2470 "grsoft.tab.c"
     break;
 
-  case 126: /* expr: INT $@42 PO expr PF  */
-#line 388 "grsoft.y"
+  case 154: /* expr: INT $@48 PO expr PF  */
+#line 451 "grsoft.y"
                                                            { if (im) yyval=(int)yyvsp[-1]; else strcat(lines[l],")");  }
-#line 2298 "grsoft.tab.c"
+#line 2476 "grsoft.tab.c"
     break;
 
 
-#line 2302 "grsoft.tab.c"
+#line 2480 "grsoft.tab.c"
 
       default: break;
     }
@@ -2492,7 +2670,7 @@ yyreturn:
   return yyresult;
 }
 
-#line 391 "grsoft.y"
+#line 454 "grsoft.y"
 
 #include"lex.yy.c"
 void  yyerror(char *s) {
@@ -2504,7 +2682,7 @@ else
 }
 
 int main(int argc,char * argv[]) {
-char rcsrev[]="$Revision: 1.19 $";
+char rcsrev[]="$Revision: 1.30 $";
 
 strtok(rcsrev,".");
 r=(struct var*)malloc(sizeof(struct var));
@@ -2519,12 +2697,19 @@ srand(12345);
 #else
 srand48(12345);
 #endif
+               temp = SDL_LoadBMP("/usr/lib64/sprite.bmp");
+if (temp) {
+                        sprite = SDL_CreateTextureFromSurface(renderer, temp);
+                } else {
+                        fprintf(stderr, "Error /usr/lib64/sprite.bmp\n");
+                }
+
 yyparse();
 fprintf(stderr,"FIN\n");
 }
 
 int WinMain() {
-char rcsrev[]="$Revision: 1.19 $";
+char rcsrev[]="$Revision: 1.30 $";
 
 strtok(rcsrev,".");
 r=(struct var*)malloc(sizeof(struct var));
@@ -2547,6 +2732,7 @@ int process(char *s) {
 }
 
 int basic2c(FILE *fp) {
+	int i;
 	fprintf(fp,"#include<stdio.h>\n");
 	fprintf(fp,"#include<setjmp.h>\n");
 	fprintf(fp,"#include<stdlib.h>\n");
@@ -2573,9 +2759,12 @@ int basic2c(FILE *fp) {
 	fprintf(fp,"char s[1024];\n");
 	fprintf(fp,"float I;\n");
 	fprintf(fp,"float HCOLOR;\n");
+	fprintf(fp,"float VERSION=20;\n");
 	fprintf(fp,"srand48(1234);\n");
-	for(int i=0;i<65536;i++) {
+	for(i=0;i<65536;i++) {
 		if (strcmp(lines[i],"")) {
+			if (trace) 
+				fprintf(fp,"fprintf(stderr,\"#%%d\",%d);",i);
 			fprintf(fp,"L%d: %s\n",i,lines[i]);
 		}
 	}
@@ -2589,12 +2778,3 @@ int basic2c(FILE *fp) {
 	fprintf(fp,"SDL_Quit();\n");
 	fprintf(fp,"}\n");
 }
-
-void destroy() {
-//	gtk_main_quit();
-}
-/*
-GTypeInstance* g_type_check_instance_cast(GTypeInstance *i,GType iface) {
-return i;
-}
-*/
