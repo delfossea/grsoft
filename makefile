@@ -1,6 +1,6 @@
 CFLAGS=-g
 
-all: grsoft grsoft.exe
+all: grsoft
 
 yy.lex.c: grsoft.l
 	flex $+
@@ -26,6 +26,9 @@ soft.exe: soft.tab.c yy.lex.c
 clean:
 	rm calc lex.yy.c soft.tab.c grsoft.tab.c
 
+check: grsoft
+	echo unimp.
+	
 install: grsoft soft
 	sudo install -b grsoft /usr/local/bin
 	sudo install -b soft /usr/local/bin
