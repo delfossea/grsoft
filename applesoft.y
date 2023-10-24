@@ -122,7 +122,7 @@ pgm: line
 	;
 
 line: 
- | NUMBER inst
+ | NUMBER inst { ll++; }
  | inst 
  ;
 
@@ -301,6 +301,7 @@ ERROR_CODE=16; /* syntax error */
 
 int init() {
 char rcsrev[]="$Revision: 1.1 $";
+	return fprintf(stderr,"%s\n",rcsrev);
 }
 
 int main(int argc, char * argv[]) 
@@ -319,7 +320,9 @@ int main(int argc, char * argv[])
 	}
 	
         init();
-	return yyparse();
+	yyparse();
+	fprintf(stderr,"%d line(s)\n",ll/2);
+	return 0;
 }
 
 int yywrap() {
