@@ -80,7 +80,7 @@
 [0-9]+"."[0-9]+	{ yylval=atof(yytext);return FLOAT; }
 "\""   { return QUOTE;}
 [A-Za-z0-9_]+   { strcpy(identifier,yytext); return IDENTIFIER;}
-[A-Za-z0-9_]+"$"   { return STRING;}
+[A-Za-z0-9_]+"$"   { return CHAINE;}
 "="	{ return EQUAL; }
 "[" { return CO; }
 "]" { return CF; }
@@ -100,6 +100,8 @@
 "." { return DOT; }
 "," { return COMMA; }
 "&" { return AMPER; }
+";" { return SEMICOLOMN; }
 "\n" { ll++; return CR; }
 \".*\" { strcpy(chars,yytext); return CHARS; }
+" " {}
 %%
