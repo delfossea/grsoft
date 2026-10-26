@@ -64,6 +64,7 @@
 "GET"|"get" { return GET; }
 "AT"|"at" { return AT; }
 "SAVE"|"save" { return SAVE; }
+"LOAD"|"load" { return LOAD; }
 "EXEC"|"exec"	BEGIN(exec);
 <exec>[ \t]*
 <exec>[^ \t\n]+ {

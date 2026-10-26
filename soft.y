@@ -26,7 +26,7 @@ struct var {
 };
 struct str {
 	char name[80];
-	enum var_type type;
+	enum str_type type;
 	char **values;
 	int size;
 	struct str * next;
@@ -151,6 +151,7 @@ int infor=0;
 %token AT
 %token CHR
 %token INT
+%token LOAD
 %%
 pgm: 
  | pgm line { printf("]"); } CR
@@ -163,13 +164,13 @@ line: NUMBER { im=0; l=atoi(yytext); strcpy(lines[l],""); } inst { if (!im&&!inf
 
 inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) strcat(lines[l],")"); else printf("%s\n",cstr); } opt_print
 
- | opt_let IDENTIFIER { notdef=1; d=r; while(d) { if (strcmp(d->name,identifier)==0) notdef=0; d=d->next; } if (notdef&&!im) strcat(lines[l],"float "); strcpy(a,identifier); } EQUAL { if (!im) sprintf(lines[l],"%s%s=",lines[l],identifier);  } expr { 
+ | opt_let IDENTIFIER { notdef=1; d=r; while(d) { if (strcmp(d->name,identifier)==0) { notdef=0; break; } d=d->next; } if (notdef&&!im) strcat(lines[l],"float "); strcpy(a,identifier); } EQUAL { if (!im) strcat(lines[l],identifier);strcat(lines[l],"=");  } expr { 
 	if (notdef) {
 		d=(struct var*)malloc(sizeof(struct var));
 		d->values=malloc(sizeof(float));
-		*(d->values)=$6; strcpy(d->name,a); d->next=r; r=d;
+		d->values[0]=$6; strcpy(d->name,a); d->next=r; r=d;
 	} else {	
-		if (im) *(d->values)=$6;
+		if (im) d->values[0]=$6;
 	}
 }
 
@@ -191,10 +192,15 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
 	D=(struct str*)malloc(sizeof(struct str));
 	D->size=1;
 	D->type=STRING;
-	D->values=calloc(D->size,1024);
-	strcpy(D->values[0],cstr);strcpy(D->name,A); D->next=root; root=D;	
+	D->values=(char**)malloc(D->size);
+	D->values[0]=(char*)malloc(1024);
+	strcpy(D->values[0],cstr);strncpy(D->name,A,strlen(A)-1); D->next=root; root=D;	
 } else {
-        sprintf(lines[l],"char * %s = %s",identifier,chars);
+        strcat(lines[l],"char *");
+	identifier[strlen(A)-1]=0;
+	strcat(lines[l],A);
+	strcat(lines[l],"=");
+	strcat(lines[l],chars);
 }
 }
  | inst DP { if (!im) sprintf(lines[l],"%s;",lines[l]); } inst
@@ -225,10 +231,15 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
 #else
 		system("./a.out");
 #endif
+#ifdef WIN32
+		system("del a.exe");
+#else
+		system("rm a.out");
+#endif
 	if (trace) {
 		gettimeofday(tv2,NULL);
 		diff=tv2->tv_sec - tv1->tv_sec;
-		printf("µsec=%d\n",(int)(diff*1000000 + tv2->tv_usec - tv1->tv_usec));
+		printf("\nµsec=%d\n",(int)(diff*1000000 + tv2->tv_usec - tv1->tv_usec));
 	}
 	
  }
@@ -252,14 +263,14 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
  | DEBUG ON { yydebug=1; }
  | DEBUG OFF { yydebug=0; }
  | REM
- | IF { if (!im) sprintf(lines[l],"%sif ",lines[l]);} cond opt_then inst
- | GOTO { sprintf(lines[l],"%s%s",lines[l],"goto L"); } expr
+ | IF { if (!im) strcat(lines[l],"if ");} cond opt_then inst
+ | GOTO { strcat(lines[l],"goto L"); } expr
  | GOSUB { if (!im) strcat(lines[l],"if (!setjmp(stack[sp++])) goto L"); } expr
- | INPUT { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); } IDENTIFIER { if (!im) sprintf(lines[l],"%s%s=atof(s)",lines[l],identifier); else fprintf(stderr,"NO DIRECT COMMAND\n"); }
+ | INPUT { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); } IDENTIFIER { if (!im) { strcat(lines[l],identifier);strcat(lines[l],"=atof(s)"); } else fprintf(stderr,"NO DIRECT COMMAND\n"); }
  | INPUT opt_prompt CHAINE { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); } 
  | HTAB
-	{ if (!im) sprintf(lines[l],"%sprintf(\"%%c[%d;",lines[l],cx); } expr { if (!im) sprintf(lines[l],"%sH\",27)",lines[l]); else printf("%c[%d;%dH",27,cx,(int)$3); }
- | VTAB { if (!im) strcat(lines[l],"printf(\"%c["); } expr { if (!im) sprintf(lines[l],"%s;%dH\",27)",lines[l],cy); else printf("%c[%d;%dH",27,(int)$3,cy); }
+	{ if (!im) strcat(lines[l],"printf(\"%c[%d;"); } expr { if (!im) strcat(lines[l],"%dH\",27,20,20)"); else printf("%c[%d;%dH",27,cx,(int)$3); }
+ | VTAB { if (!im) strcat(lines[l],"printf(\"%c["); } expr { if (!im) strcat(lines[l],"%d;%dH\",27,20,20)"); else printf("%c[%d;%dH",27,(int)$3,cy); }
  | HOME { if (im) 
 #ifdef WIN32
 system("cls");
@@ -268,6 +279,9 @@ printf("%c[2J",27);
 #endif
 else strcat (lines[l],"printf(\"%c[2J\",27)");   }
  | TEXT { if (im) { fprintf(stderr,"Already in text mode\n"); } }
+ | GR { if (im) {
+	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
+} }
  | HGR { if (im) {
 	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
 } }
@@ -298,17 +312,21 @@ else strcat (lines[l],"printf(\"%c[2J\",27)");   }
  | POKE expr COMMA expr
  | GET CHAINE
  | FOR { infor = 1; } IDENTIFIER EQUAL { if (!im) {
-sprintf(lines[l],"%sfor(%s=", lines[l], identifier);  } } expr TO { if (!im) sprintf(lines[l],"%s;%s<=", lines[l], identifier); }
- expr { if (!im) sprintf(lines[l],"%s;%s++) {", lines[l], identifier); }
+sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
+ } expr TO { if (!im) strcat(lines[l],";");strcat(lines[l],identifier);strcat(lines[l],"<="); }
+ expr { if (!im) strcat(lines[l],";"); strcat(lines[l],identifier);strcat(lines[l],"++){"); }
  | NEXT { if (!im) strcat(lines[l],"}"); } 
  | DATA list
  | READ IDENTIFIER
  | RETURN { if (!im) strcat(lines[l],"longjmp(stack[--sp],1)"); }
  | END { if (!im) strcat(lines[l],"return"); else return 0;  }
- | HPLOT { if (!im) strcat(lines[l],"hplot(renderer,(int)("); } expr { if(im) b1=atoi(yytext); } COMMA { if (!im) strcat(lines[l],"),(int)("); } expr { b2=atoi(yytext); if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }  
- | HPLOT { if (!im) strcat(lines[l],"SDL_RenderDrawLine(renderer,b1,b2,(int)("); } TO expr COMMA { if (!im) strcat(lines[l],"),(int)("); } expr { if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }
- | HLIN expr COMMA expr AT expr
- | VLIN expr COMMA expr AT expr
+ | HPLOT { fprintf(stderr,"USE GRSOFT\n"); }  expr COMMA expr
+ | HLIN expr COMMA expr AT expr {
+	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
+ }
+ | VLIN expr COMMA expr AT expr {
+	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
+ }
  | SAVE IDENTIFIER {
 	if (im) {
 		FILE * fp;
@@ -317,6 +335,7 @@ sprintf(lines[l],"%sfor(%s=", lines[l], identifier);  } } expr TO { if (!im) spr
 		fclose(fp);
  }
  }
+ | LOAD IDENTIFIER { fprintf(stderr,"unimp.\n"); }
  | NEW { for(int i=0;i<65536;i++) strcpy(lines[i],""); }
  | DRAW expr AT expr COMMA expr
  | CLEAR { if (im) { r=NULL; root=NULL; } }
@@ -350,7 +369,7 @@ list: expr
     | list COMMA expr
     ;
 
-cond: { sprintf(lines[l],"%s ( ",lines[l]); } expr oper { sprintf(lines[l],"%s %s ",lines[l],oper); } expr { sprintf(lines[l],"%s ) ",lines[l]); }
+cond: { strcat(lines[l]," ( "); } expr oper { strcat(lines[l],oper); } expr { strcat(lines[l]," ) "); }
 	| PEEK PO expr PF
 	| PO cond PF
 	| cond OR cond
@@ -365,7 +384,7 @@ oper: EQUAL { strcpy(oper,"=="); }
 	| PE { strcpy(oper,"<="); }
 	;
 
-sexpr: string { if (im) strcpy(cstr, identifier); }
+sexpr: string { if (im) strcpy(cstr, string); }
 	| sexpr PLUS string { if (im) strcat(cstr, identifier); }
 	| MID PO string COMMA expr COMMA expr PF
 	| LEFT PO string COMMA expr PF
@@ -373,13 +392,13 @@ sexpr: string { if (im) strcpy(cstr, identifier); }
 	| STR PO expr PF { if (im) sprintf(cstr, "%g", $3); }
 	;
 
-multi_expr: { if (!im) strcat(lines[l],"g\","); } expr { if (im) {
+multi_expr: { if (!im) strcat(lines[l],"f\","); } expr { if (im) {
 	  $$=$2;
-	printf("%g\n",$2);
+	sprintf(cstr, "%f", $2);
 }
 }
-        | { if (!im) strcat(lines[l],"s\","); } sexpr
-        | { if (!im) strcat(lines[l],"c\","); } CHR PO { if (!im) strcat(lines[l],"(int)"); } expr PF { if (im) printf("%c",(int)$5); }
+	        | { if (!im) strcat(lines[l],"s\","); } sexpr { strcpy(cstr,string); }
+        | { if (!im) strcat(lines[l],"c\","); } CHR PO { if (!im) strcat(lines[l],"(int)"); } expr PF { if (im) sprintf(cstr, "%c", (int)$5); }
 	| { printf("\n"); }
 	;
 
@@ -394,8 +413,8 @@ sep: COMMA
  | SEMICOLOMN
  ;
 
-string: CHAINE { if (im) strcpy(identifier,yytext); else sprintf(lines[l],"%s%s",lines[l],identifier); }
-        | CHARS { if (!im) strcat(lines[l],chars); else { strcpy(string,chars+1);string[strlen(string)-1]=0;strcpy(cstr,string); } }
+string: CHAINE { if (im) strcpy(identifier,yytext); else strcat(lines[l],identifier); }
+        | CHARS { if (!im) strcat(lines[l],chars); else { strcpy(string,chars+1);string[strlen(string)-1]=0; } }
         ;
 
 expr: expr PLUS { if (!im) strcat(lines[l],"+"); } expr { if (im) $$=$1+$4; }
@@ -476,8 +495,10 @@ else
 	yyparse();
 }
 
+char rcsrev[]="$Revision: 1.15 $";
+struct var *r2;
+
 int main(int argc,char * argv[]) {
-char rcsrev[]="$Revision: 1.11 $";
 int ch;
 
 while ((ch = getopt(argc,argv,"d")) != -1) {
@@ -492,12 +513,15 @@ strtok(rcsrev,".");
 r=(struct var*)malloc(sizeof(struct var));
 strcpy(r->name,"HCOLOR");
 r->values=malloc(sizeof(float));
-*(r->values)=7;
-r->next=(struct var*)malloc(sizeof(struct var));
-//r->next->values=(float)malloc(sizeof(float))
-//*(r->next->values)=atof(strtok(NULL,"."));
-r->next=NULL;
-//strcpy(r->next->name,"VERSION");
+r->size=1;
+r->values[0]=7;
+r2=(struct var*)malloc(sizeof(struct var));
+r->next=r2;
+r2->values=malloc(sizeof(float));
+r2->size=1;
+r2->values[0]=atoi(strtok(NULL,"."));
+r2->next=NULL;
+strcpy(r2->name,"VERSION");
 #ifdef WIN32
 srand(12345);
 #else
@@ -509,7 +533,6 @@ fprintf(stderr,"FIN\n");
 }
 
 int WinMain() {
-char rcsrev[]="$Revision: 1.11 $";
 
 strtok(rcsrev,".");
 r=(struct var*)malloc(sizeof(struct var));
@@ -525,6 +548,7 @@ printf(PROMPT);
 fflush(stdout);
 return yyparse();
 }
+
 int yywrap() {
     yypop_buffer_state();
     
@@ -541,6 +565,7 @@ int process(char *s) {
 }
 
 int basic2c(FILE *fp) {
+	int v;
 	fprintf(fp,"#include<stdio.h>\n");
 	fprintf(fp,"#include<setjmp.h>\n");
 	fprintf(fp,"#include<stdlib.h>\n");
@@ -552,8 +577,8 @@ int basic2c(FILE *fp) {
 
 	fprintf(fp,"void main(int argc, char * argv[]) {\n");
 	fprintf(fp,"char s[1024];\n");
-	fprintf(fp,"float I;\n");
-	fprintf(fp,"float VERSION=5;\n");
+
+	fprintf(fp,"float VERSION=%f;\n",r2->values[0]);
 #ifdef WIN32
 	fprintf(fp,"srand(1234);\n");
 #else
