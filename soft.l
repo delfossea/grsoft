@@ -44,6 +44,7 @@
 "SIN"|"sin" { return SIN; }
 "COS"|"cos" { return COS; }
 "TAN"|"tan" { return TAN; }
+"ATAN"|"atan" { return ATAN; }
 "EXP"|"exp" { return EXP; }
 "RANDOMIZE"|"randomize" { return RANDOMIZE; }
 "DIM"|"dim" { return DIM; }
@@ -65,6 +66,7 @@
 "AT"|"at" { return AT; }
 "SAVE"|"save" { return SAVE; }
 "LOAD"|"load" { return LOAD; }
+"CALL"|"call" { return CALL; }
 "EXEC"|"exec"	BEGIN(exec);
 <exec>[ \t]*
 <exec>[^ \t\n]+ {
@@ -81,7 +83,7 @@
 [0-9]+"."[0-9]+	{ yylval=atof(yytext);return FLOAT; }
 "\""   { return QUOTE;}
 [A-Za-z0-9_]+   { strcpy(identifier,yytext); return IDENTIFIER;}
-[A-Za-z0-9_]+"$"   { return CHAINE;}
+[A-Za-z0-9_]+"$"   { strcpy(String,yytext); return CHAINE;}
 "="	{ return EQUAL; }
 "[" { return CO; }
 "]" { return CF; }
