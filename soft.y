@@ -70,6 +70,7 @@ int infor=0;
 %token POKE
 %token RUN
 %token RND
+%token INT
 %token PRINT
 %token IDENTIFIER
 %token PLUS
@@ -154,7 +155,6 @@ int infor=0;
 %token AMPER
 %token AT
 %token CHR
-%token INT
 %token LOAD
 %token CALL
 %%
@@ -169,17 +169,40 @@ line: NUMBER { im=0; l=atoi(yytext); strcpy(lines[l],""); } inst { if (!im&&!inf
 
 inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) strcat(lines[l],")"); else printf("%s\n",cstr); } opt_print
 
- | opt_let IDENTIFIER { notdef=1; d=r; while(d) { if (strcmp(d->name,identifier)==0) { notdef=0; break; } d=d->next; } if (notdef&&!im) strcat(lines[l],"float "); strcpy(a,identifier); } EQUAL { if (!im) strcat(lines[l],identifier);strcat(lines[l],"=");  } expr { 
-	if (im) {
+ | opt_let IDENTIFIER { 
+	notdef=1; 
+	d=r; 
+	while(d) { 
+		if (strcmp(d->name,identifier)==0) { notdef=0; break; } 
+		d=d->next; 
+	} 
 	if (notdef) {
+		if (!im) strcat(lines[l],"float "); 
 		d=(struct var*)malloc(sizeof(struct var));
 		d->values=malloc(sizeof(float));
 		d->size=1;
-		d->values[0]=$6; strcpy(d->name,a); d->next=r; r=d;
-	} else {	
-		d->values[0]=$6;
+		d->values[0]=0; 
+		strcpy(d->name,identifier); 
+		d->next=r; 
+		r=d;
 	}
-    }
+	strcpy(a,identifier); 
+} EQUAL { 
+	if (!im) {
+		strcat(lines[l],identifier);
+		strcat(lines[l],"=");  
+	}
+} expr { 
+	if (im) {
+		d=r;
+		while(d) {
+			if (strcmp(d->name,a)==0) {
+				d->values[0]=$6;
+				break;
+			}
+			d=d->next;
+		}
+	}
 }
 
  
@@ -317,8 +340,8 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
  | GOTO { strcat(lines[l],"goto L"); } expr
  | GOSUB { if (!im) strcat(lines[l],"if (!setjmp(stack[sp++])) goto L"); } expr
  | INPUT { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); } IDENTIFIER { if (!im) { strcat(lines[l],identifier);strcat(lines[l],"=atof(s)"); } else fprintf(stderr,"NO DIRECT COMMAND\n"); }
- | INPUT opt_prompt CHAINE { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); } 
- | INPUT opt_prompt CHAINE PO expr PF { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); } 
+ | INPUT opt_prompt CHAINE { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); else fprintf(stderr,"NO DIRECT COMMAND\n");  } 
+ | INPUT opt_prompt CHAINE PO expr PF { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier);  else fprintf(stderr,"NO DIRECT COMMAND\n"); } 
  | HTAB
 	{ if (!im) strcat(lines[l],"printf(\"%c[%d;"); } expr { if (!im) strcat(lines[l],"%dH\",27,20,20)"); else printf("%c[%d;%dH",27,cx,(int)$3); }
  | VTAB { if (!im) strcat(lines[l],"printf(\"%c["); } expr { if (!im) strcat(lines[l],"%d;%dH\",27,20,20)"); else printf("%c[%d;%dH",27,(int)$3,cy); }
@@ -476,6 +499,7 @@ multi_expr: { if (!im) strcat(lines[l],"f\","); } expr { if (im) {
 	;
 
 opt_print: { if (!im) strcat(lines[l],";printf(\"\\n\")"); }
+ | sep
  | sep  { if (!im) strcat(lines[l],";printf(\"%f\","); } expr { if (!im) strcat(lines[l],")"); }
  | sep sexpr
  | opt_print sep expr
@@ -562,7 +586,7 @@ else
 	yyparse();
 }
 
-char rcsrev[]="$Revision: 1.20 $";
+char rcsrev[]="$Revision: 1.21 $";
 struct var *r2;
 
 int main(int argc,char * argv[]) {

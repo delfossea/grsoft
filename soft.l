@@ -52,9 +52,11 @@
 "OR"|"or" { return OR; }
 "AND"|"and" { return AND; }
 "RND"|"rnd" { return RND; }
+"INT"|"int" { return INT; }
 "ASC"|"asc" { return ASC; }
 "SYSTEM"|"system" { return SYSTEM; }
 "MID$"|"mid$" { return MID; }
+"CHR$"|"chr$" { return CHR; }
 "LEFT$"|"left$" { return LEFT; }
 "RIGHT$"|"right$" { return RIGHT; }
 "HTAB"|"htab" { return HTAB; }

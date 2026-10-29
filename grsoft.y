@@ -418,7 +418,7 @@ sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
  | READ IDENTIFIER
  | RETURN { if (!im) strcat(lines[l],"longjmp(stack[--sp],1)"); }
  | END { if (!im) strcat(lines[l],"return"); else return 0;  }
- | HPLOT { if (!im) strcat(lines[l],"SDL_RenderDrawPoint(renderer,(int)("); } expr { if(im) b1=atoi(yytext); } COMMA { if (!im) strcat(lines[l],"),(int)("); } expr { b2=atoi(yytext); if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }  
+ | HPLOT { if (!im) strcat(lines[l],"hplot(renderer,(int)("); } expr { if(im) b1=atoi(yytext); } COMMA { if (!im) strcat(lines[l],"),(int)("); } expr { b2=atoi(yytext); if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }  
  | HPLOT { if (!im) strcat(lines[l],"SDL_RenderDrawLine(renderer,b1,b2,(int)("); } TO expr COMMA { if (!im) strcat(lines[l],"),(int)("); } expr { if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); else {
 SDL_RenderDrawLine(renderer,0,0,100,100);
 SDL_RenderPresent(renderer);
@@ -676,11 +676,6 @@ int basic2c(FILE *fp) {
 	fprintf(fp,"#include<stdlib.h>\n");
 	fprintf(fp,"#include<string.h>\n");
 	fprintf(fp,"#include<math.h>\n");
-	fprintf(fp,"#include<SDL2/SDL.h>\n");
-
-	fprintf(fp,"SDL_Window* pWindow = NULL;");
-	fprintf(fp,"SDL_Renderer* renderer = NULL;");
-	fprintf(fp,"SDL_bool done;");
 
 	fprintf(fp,"jmp_buf stack[100]; int sp=0;\n");
 
