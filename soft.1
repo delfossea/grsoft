@@ -1,0 +1,48 @@
+.TH SOFT 1 "October 2026" "Bison BASIC" "User Manual"
+.SH NAME
+soft \- Applesoft BASIC interpreter and compiler
+.SH SYNOPSIS
+.B soft
+[
+.B -d
+]
+[
+.I file.bas
+]
+.SH DESCRIPTION
+.B soft
+is a lightweight Applesoft BASIC interpreter and compiler. It allows interactive execution (immediate mode) or compilation of BASIC programs into C code, which is then compiled and executed.
+.SH OPTIONS
+.TP
+.B -d
+Enables parser debugging mode (sets YYDEBUG=1).
+.SH COMMANDS
+.TP
+.B RUN
+Compiles the current program to C and executes it.
+.TP
+.B SAVE \fIfile\fP
+Saves the compiled C code lines to a file.
+.TP
+.B LOAD \fIfile\fP
+Loads a BASIC source file into memory.
+.TP
+.B EXEC \fIfile\fP
+Executes/includes a BASIC source file interactively.
+.TP
+.B CATALOG \fR(or\fP CAT\fR)\fP
+Lists files in the current directory.
+.TP
+.B PREFIX \fI[path]\fP
+Displays or changes the current working directory.
+.TP
+.B PLOT \fIx, y\fP
+Plots a point on the screen using ANSI escape sequences.
+.TP
+.B DATA \fR...\fP
+Stores data values for READ statements.
+.TP
+.B READ \fIvar\fP
+Reads values from DATA statements into variables.
+.SH AUTHORS
+Written by the Bison BASIC team.
