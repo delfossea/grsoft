@@ -1,0 +1,3 @@
+10 LET A = 5
+20 IF A > 2 THEN PRINT "YES"
+RUN

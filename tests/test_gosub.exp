@@ -1,0 +1,17 @@
+#include<stdio.h>
+#include<setjmp.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+jmp_buf stack[100]; int sp=0;
+void main(int argc, char * argv[]) {
+char s[1024];
+float VERSION=20.000000;
+srand48(1234);
+L10: printf("%s","START");printf("\n");
+L20: if (!setjmp(stack[sp++])) goto L100;
+L30: printf("%s","END");printf("\n");
+L40: return;
+L100: printf("%s","SUB");printf("\n");
+L110: longjmp(stack[--sp],1);
+}

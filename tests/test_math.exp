@@ -1,0 +1,14 @@
+#include<stdio.h>
+#include<setjmp.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+jmp_buf stack[100]; int sp=0;
+void main(int argc, char * argv[]) {
+char s[1024];
+float VERSION=20.000000;
+srand48(1234);
+L10: printf("%f",sqrt(2));printf("\n");
+L20: printf("%f",(float)drand48()*1);printf("\n");
+L30: printf("%f",sin(0));printf("\n");
+}

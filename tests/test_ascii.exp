@@ -1,0 +1,17 @@
+#include<stdio.h>
+#include<setjmp.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+jmp_buf stack[100]; int sp=0;
+void main(int argc, char * argv[]) {
+char s[1024];
+float VERSION=20.000000;
+srand48(1234);
+L20: float I=33;
+L30: printf("%c",(int)I);printf("\n");
+L40: I=I+1;
+L50: if  ( I>127 ) {goto L100;};
+L60: goto L30;
+L100: return;
+}

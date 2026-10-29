@@ -1,0 +1,13 @@
+#include<stdio.h>
+#include<setjmp.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+jmp_buf stack[100]; int sp=0;
+void main(int argc, char * argv[]) {
+char s[1024];
+float VERSION=20.000000;
+srand48(1234);
+L10: float X[10];
+L20: X[1]=5.5;
+}

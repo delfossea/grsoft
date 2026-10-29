@@ -1,0 +1,4 @@
+10 LET A = 10
+20 LET B = 20
+30 LET C = A + B
+RUN
