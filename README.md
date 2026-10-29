@@ -9,15 +9,14 @@ soft.l and soft.y
 
 -to compile:
 
+```
 $make
-
 $make test
-
 $make install
-
+```
 -to run
-
+```
 $./soft
-
+```
 # graphics
 grsoft.l and grsoft.y
