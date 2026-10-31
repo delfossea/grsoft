@@ -5,6 +5,10 @@
 #include<math.h>
 #include<sys/time.h>
 #include<time.h>
+#include<unistd.h>
+#include<sys/stat.h>
+#include<sys/types.h>
+#include<sys/ioctl.h>
 /*
 int yydebug=1;
 */
@@ -45,22 +49,74 @@ float cv;
 int cx,cy;
 char lines[65536][512];
 char mem[65536];
+#include<sys/ioctl.h>
+#include<termios.h>
+
+static struct termios orig_t;
+static int orig_t_saved = 0;
+static int tty_fd = -1;
+
+static void restore_terminal() {
+    if (orig_t_saved && tty_fd != -1) {
+        tcsetattr(tty_fd, TCSANOW, &orig_t);
+    }
+}
+
+int peek_func(int addr) {
+    if (addr == 49152) {
+        static FILE *tty = NULL;
+        static int initialized = 0;
+        if (!tty) {
+            tty = fopen("/dev/tty", "r+");
+            if (!tty) tty = stdin;
+        }
+        tty_fd = fileno(tty);
+        if (!initialized && isatty(tty_fd)) {
+            tcgetattr(tty_fd, &orig_t);
+            orig_t_saved = 1;
+            atexit(restore_terminal);
+
+            struct termios t = orig_t;
+            t.c_lflag &= ~(ICANON | ECHO);
+            tcsetattr(tty_fd, TCSANOW, &t);
+            initialized = 1;
+        }
+        int bytes = 0;
+        ioctl(tty_fd, FIONREAD, &bytes);
+        if (bytes > 0) {
+            int c = fgetc(tty);
+            mem[49152] = (char)(c | 0x80);
+        }
+        int val = (unsigned char)mem[addr];
+        mem[49152] &= ~0x80;
+        return val;
+    }
+    return (unsigned char)mem[addr];
+}
 char aux[65536];
+char aux1[1024];
+char aux2[1024];
 int im=1;
+int gr=0;
 int l=0;
 int notdef=1;
 extern char * yytext;
 extern void destroy();
 char s[1024];
 int trace=0;
-int b1,b2,e1,e2;
 void yyerror(char *s);
 int basic2c(FILE *fp);
 int yylex();
 char oper[4];
 int infor=0;
+int color=2;
+int plot_len;
+float data_values[4096];
+int data_count = 0;
+int data_ptr = 0;
 %}
 %token DEL
+%token CREATE
 %token PR
 %token STR
 %token NOTRACE
@@ -116,7 +172,6 @@ int infor=0;
 %token SYSTEM
 %token DUMP
 %token CLEAR
-%token COLOR
 %token DRAW
 %token IF
 %token THEN
@@ -157,17 +212,29 @@ int infor=0;
 %token CHR
 %token LOAD
 %token CALL
+%token CATALOG
+%token PREFIX
+%token STORE
+%token RESTORE
+%left PLUS MINUS
+%left ASTERISK DIVIDE
+%nonassoc UMINUS
 %%
 pgm: 
- | pgm line { printf("]"); } CR
- | pgm CR { printf("]"); }
+ | pgm line { if (!gr || !im) printf("]"); } CR
+ | pgm CR { if (!gr || !im) printf("]"); }
  ;
 
-line: NUMBER { im=0; l=atoi(yytext); strcpy(lines[l],""); } inst { if (!im&&!infor) strcat(lines[l],";"); else infor=0;  }
- |	{ im=1; } inst 
+line: NUMBER { im=0; l=atoi(yytext); strcpy(lines[l],""); } insts { if (!im&&!infor) strcat(lines[l],";"); else infor=0;  }
+ |	{ im=1; } insts
  ;
 
-inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) strcat(lines[l],")"); else printf("%s\n",cstr); } opt_print
+insts : inst
+	| insts DP  { strcat(lines[l],";"); } inst
+	| { lines[l][0]=0; }
+	;
+
+inst: PRINT multi_expr { if (im) printf("%s\n",cstr); } opt_print { if (!im) strcat(lines[l],";printf(\"\\n\")"); }
 
  | opt_let IDENTIFIER { 
 	notdef=1; 
@@ -202,6 +269,10 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
 			}
 			d=d->next;
 		}
+		if (strncmp(a,"COLOR",5)==0) {
+			color=(int)$6;
+			mem[48]=color;
+		}
 	}
 }
 
@@ -234,7 +305,6 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
 	strcat(lines[l],chars);
 }
 }
- | inst DP { if (!im) strcat(lines[l],";"); } inst
  | CHAINE { 
 	if (im) {
 		strncpy(A,String,strlen(String)-1); 
@@ -294,7 +364,7 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
 #ifdef WIN32
 		system("del a.exe");
 #else
-		res=system("rm a.out");
+		res=system("rm a.out soft.c");
 #endif
 	if (trace) {
 		gettimeofday(tv2,NULL);
@@ -342,9 +412,34 @@ inst: PRINT { if (!im) strcat(lines[l],"printf(\"%"); } multi_expr { if (!im) st
  | INPUT { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); } IDENTIFIER { if (!im) { strcat(lines[l],identifier);strcat(lines[l],"=atof(s)"); } else fprintf(stderr,"NO DIRECT COMMAND\n"); }
  | INPUT opt_prompt CHAINE { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); else fprintf(stderr,"NO DIRECT COMMAND\n");  } 
  | INPUT opt_prompt CHAINE PO expr PF { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier);  else fprintf(stderr,"NO DIRECT COMMAND\n"); } 
- | HTAB
-	{ if (!im) strcat(lines[l],"printf(\"%c[%d;"); } expr { if (!im) strcat(lines[l],"%dH\",27,20,20)"); else printf("%c[%d;%dH",27,cx,(int)$3); }
- | VTAB { if (!im) strcat(lines[l],"printf(\"%c["); } expr { if (!im) strcat(lines[l],"%d;%dH\",27,20,20)"); else printf("%c[%d;%dH",27,(int)$3,cy); }
+ | HTAB {
+     if (!im) {
+         plot_len = strlen(lines[l]);
+     }
+ } expr {
+     if (im) {
+         printf("%c[%dG", 27, (int)$3);
+     } else {
+         char expr_code[256];
+         strcpy(expr_code, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+         sprintf(lines[l] + strlen(lines[l]), "printf(\"%%c[%%dG\", 27, (int)(%s))", expr_code);
+     }
+ }
+ | VTAB {
+     if (!im) {
+         plot_len = strlen(lines[l]);
+     }
+ } expr {
+     if (im) {
+         printf("%c[%dd", 27, (int)$3);
+     } else {
+         char expr_code[256];
+         strcpy(expr_code, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+         sprintf(lines[l] + strlen(lines[l]), "printf(\"%%c[%%dd\", 27, (int)(%s))", expr_code);
+     }
+ }
  | HOME { if (im) 
 #ifdef WIN32
 system("cls");
@@ -352,14 +447,17 @@ system("cls");
 printf("%c[2J",27);
 #endif
 else strcat (lines[l],"printf(\"%c[2J\",27)");   }
- | TEXT { if (im) { fprintf(stderr,"Already in text mode\n"); } }
+ | TEXT { if (im) { gr=0; } }
  | GR { if (im) {
-	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
-} }
+	gr=1;
+	printf("%c[2J",27);
+} else {
+	strcat(lines[l],"printf(\"%c[2J\",27);");
+}}
  | HGR { if (im) {
 	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
 } }
- | DIM IDENTIFIER PO NUMBER PF {
+ | DIM IDENTIFIER PO expr PF {
 	if (im) {
 		d=(struct var*)malloc(sizeof(struct var));
 		strcpy(d->name,identifier);
@@ -370,7 +468,7 @@ else strcat (lines[l],"printf(\"%c[2J\",27)");   }
 		d->values = calloc(d->size, sizeof(float));
 		} else { sprintf(lines[l],"%sfloat %s[%d]",lines[l],identifier,(int)$4); }
 	} opt_dim
- | DIM CHAINE PO NUMBER PF {
+ | DIM CHAINE PO expr PF {
 	if (im) {
 		ds=(struct str*)malloc(sizeof(struct str));
 		String[strlen(String)-1]=0;
@@ -391,7 +489,6 @@ else strcat (lines[l],"printf(\"%c[2J\",27)");   }
 		sprintf(lines[l],"%schar * %s[%d]",lines[l],varname,(int)$4); 
 	}
  } opt_dims
- | PEEK PO expr PF { if (im) { printf("%d\n",mem[(int)$3]); } }
  | POKE expr COMMA expr { if (im) { mem[(int)$2]=(char)$4; } }
  | GET CHAINE { if (im) fprintf(stderr,"DIRECT ERROR\n"); }
  | FOR { infor = 1; } IDENTIFIER EQUAL { if (!im) {
@@ -399,43 +496,211 @@ sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
  } expr TO { if (!im) strcat(lines[l],";");strcat(lines[l],identifier);strcat(lines[l],"<="); }
  expr { if (!im) strcat(lines[l],";"); strcat(lines[l],identifier);strcat(lines[l],"++){"); }
  | NEXT { if (!im) strcat(lines[l],"}"); } opt_var
- | DATA list
- | READ IDENTIFIER
+ | DATA {
+     if (!im) {
+         plot_len = strlen(lines[l]);
+     }
+ } list {
+     if (!im) {
+         lines[l][plot_len] = '\0';
+         strcat(lines[l], "/* DATA */");
+     }
+ }
+ | READ IDENTIFIER {
+     struct var *v;
+     int found = 0;
+     if (im) {
+         struct var *d = r;
+         while(d) {
+             if (strcmp(d->name, identifier) == 0) {
+                 found = 1;
+                 if (data_ptr < data_count) {
+                     d->values[0] = data_values[data_ptr++];
+                 } else {
+                     fprintf(stderr, "OUT OF DATA ERROR\n");
+                 }
+                 break;
+             }
+             d = d->next;
+         }
+         if (!found) {
+             d = (struct var*)malloc(sizeof(struct var));
+             strcpy(d->name, identifier);
+             d->values = malloc(sizeof(float));
+             d->size = 1;
+             if (data_ptr < data_count) {
+                 d->values[0] = data_values[data_ptr++];
+             } else {
+                 d->values[0] = 0;
+                 fprintf(stderr, "OUT OF DATA ERROR\n");
+             }
+             d->next = r;
+             r = d;
+         }
+     } else {
+         notdef = 1;
+         struct var *d = r;
+         while(d) {
+             if (strcmp(d->name, identifier) == 0) {
+                 notdef = 0;
+                 break;
+             }
+             d = d->next;
+         }
+         if (notdef) {
+             strcat(lines[l], "float ");
+             d = (struct var*)malloc(sizeof(struct var));
+             d->values = malloc(sizeof(float));
+             d->size = 1;
+             d->values[0] = 0;
+             strcpy(d->name, identifier);
+             d->next = r;
+             r = d;
+         }
+         char buf[256];
+         sprintf(buf, "%s=data_values[data_ptr++]", identifier);
+         strcat(lines[l], buf);
+     }
+ }
  | RETURN { if (!im) strcat(lines[l],"longjmp(stack[--sp],1)"); }
  | END { if (!im) strcat(lines[l],"return"); else return 0;  }
+ | PLOT {
+     if (!im) {
+         plot_len = strlen(lines[l]);
+     }
+ } expr {
+     if (!im) {
+         strcpy(aux1, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+     }
+ } COMMA expr {
+     if (im) {
+         printf("%c[4%dm%c[%d;%dH ",27,color,27,(int)$6,(int)$3);
+     } else {
+         char y_code[512];
+         strcpy(y_code, lines[l] + plot_len);
+         sprintf(lines[l] + plot_len, "printf(\"%%c[4%%dm%%c[%%d;%%dH \",27,(int)COLOR,27,(int)(%s),(int)(%s))", y_code, aux1);
+     }
+ }
  | HPLOT { fprintf(stderr,"USE GRSOFT\n"); }  expr COMMA expr
- | HLIN expr COMMA expr AT expr {
-	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
+ | HLIN {
+     if (!im) {
+         plot_len = strlen(lines[l]);
+     }
+ } expr {
+     if (!im) {
+         strcpy(aux1, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+     }
+ } COMMA expr {
+     if (!im) {
+         strcpy(aux2, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+     }
+ } AT expr {
+     if (im) {
+         for(int p=(int)$3; p<=(int)$6; p++)
+             printf("%c[4%dm%c[%d;%dH ",27,color,27,(int)$9,p);
+     } else {
+         char y_code[512];
+         strcpy(y_code, lines[l] + plot_len);
+         sprintf(lines[l] + plot_len, "for(int p=(int)(%s); p<=(int)(%s); p++) printf(\"%%c[4%%dm%%c[%%d;%%dH \",27,(int)COLOR,27,(int)(%s),p)", aux1, aux2, y_code);
+     }
  }
- | VLIN expr COMMA expr AT expr {
-	fprintf(stderr,"NO GRAPHICS ERROR USE GRSOFT!\n");
+ | VLIN {
+     if (!im) {
+         plot_len = strlen(lines[l]);
+     }
+ } expr {
+     if (!im) {
+         strcpy(aux1, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+     }
+ } COMMA expr {
+     if (!im) {
+         strcpy(aux2, lines[l] + plot_len);
+         lines[l][plot_len] = '\0';
+     }
+ } AT expr {
+     if (im) {
+         for(int p=(int)$3; p<=(int)$6; p++)
+             printf("%c[4%dm%c[%d;%dH ",27,color,27,p,(int)$9);
+     } else {
+         char y_code[512];
+         strcpy(y_code, lines[l] + plot_len);
+         sprintf(lines[l] + plot_len, "for(int p=(int)(%s); p<=(int)(%s); p++) printf(\"%%c[4%%dm%%c[%%d;%%dH \",27,(int)COLOR,27,p,(int)(%s))", aux1, aux2, y_code);
+     }
  }
- | SAVE IDENTIFIER {
+ | SAVE filename {
 	if (im) {
 		FILE * fp;
+		fprintf(stderr,"saving %s\n",identifier);
 		fp=fopen(identifier,"w");
-		for(int i=0;i<65536;i++) if (strcmp(lines[i],"")) fprintf(fp,"L%d: %s\n",i,lines[i]);
-		fclose(fp);
+		if (fp==NULL)
+			fprintf(stderr,"erreur %s\n",identifier);
+		else {
+			for(int i=0;i<65536;i++) if (strcmp(lines[i],"")) fprintf(fp,"L%d: %s\n",i,lines[i]);
+			fclose(fp);
+		}
  }
  }
- | LOAD IDENTIFIER { fprintf(stderr,"unimp.\n"); }
+ | LOAD filename {
+     if (im) {
+         FILE *fp;
+         fprintf(stderr, "loading %s\n", identifier);
+         fp = fopen(identifier, "r");
+         if (fp == NULL) {
+             fprintf(stderr, "I/O ERROR\n");
+         } else {
+             for(int i=0; i<65536; i++) strcpy(lines[i], "");
+             char buf[1024];
+             int f = 0;
+             int l_num = 0;
+             while (fgets(buf, sizeof(buf), fp) != NULL) {
+                 if (sscanf(buf, "L%d: %[^\n]", &l_num, lines[l_num]) == 2) {
+                     size_t len = strlen(lines[l_num]);
+                     if (len > 0 && lines[l_num][len-1] == '\r') {
+                         lines[l_num][len-1] = '\0';
+                     }
+                     f++;
+                 }
+             }
+             fclose(fp);
+             fprintf(stderr, "%d lines read\n", f);
+         }
+     }
+ }
  | CALL NUMBER { fprintf(stderr,"unimp.\n"); }
- | NEW { for(int i=0;i<65536;i++) strcpy(lines[i],""); }
+ | CATALOG { int res; if (im) res=system("ls -la"); }
+ | PREFIX {
+     if (im) {
+         char cwd[1024];
+         if (getcwd(cwd, sizeof(cwd))) {
+             printf("%s\n", cwd);
+         }
+     }
+ }
+ | PREFIX IDENTIFIER { if (im) { if (chdir(identifier) < 0) fprintf(stderr, "I/O ERROR\n"); } }
+ | CREATE IDENTIFIER {
+     if (im) {
+         if (mkdir(identifier, 0755) < 0) {
+             fprintf(stderr, "I/O ERROR\n");
+         }
+     }
+ }
+ | DEL filename {
+     if (im) {
+         if (unlink(identifier) < 0 && rmdir(identifier) < 0) {
+             fprintf(stderr, "I/O ERROR\n");
+         }
+     }
+ }
+ | STORE IDENTIFIER { fprintf(stderr,"unimp.\n"); }
+ | RESTORE IDENTIFIER { fprintf(stderr,"unimp.\n"); }
+ | NEW { for(int i=0;i<65536;i++) strcpy(lines[i],""); data_count=0; data_ptr=0; }
  | DRAW expr AT expr COMMA expr
- | CLEAR { if (im) { r=NULL; root=NULL; } }
+ | CLEAR { if (im) { r=NULL; root=NULL; data_ptr=0; } }
  ;
-/*
-toext: { if (!im) strcat(lines[l],"));\nSDL_RenderPresent(renderer)"); }
-     | TO { if (!im) strcat(lines[l],","); } expr { e1=atoi(yytext); } COMMA { if (!im) strcat(lines[l],","); } expr { if (im) {
-   e2=atoi(yytext);
-   SDL_RenderDrawLine(renderer, b1, b2, e1, e2);
-   SDL_RenderPresent(renderer);
-}
-else {
-	strcat(lines[l],");\nSDL_RenderPresent(renderer)"); 
-	}
-}
-*/
 
 opt_dim :
 	;
@@ -460,16 +725,20 @@ opt_var:
 	| IDENTIFIER
 	;
 
-list: expr
-    | list COMMA expr
-    ;
+list: expr {
+    data_values[data_count++] = $1;
+}
+| list COMMA expr {
+    data_values[data_count++] = $3;
+}
+;
 
 cond: { strcat(lines[l]," ( "); } expr oper { strcat(lines[l],oper); } expr { strcat(lines[l]," ) "); }
 	| PEEK PO expr PF
 	| PO cond PF
 	| cond OR cond
  	| NOT cond
-	| { if (!im) strcat(lines[l],"(strcmp("); } string EQUAL { if (!im) strcat(lines[l],","); } string { if (!im) strcat(lines[l],")==0) "); }
+	| { if (!im) strcat(lines[l],"(strcmp("); } sexpr EQUAL { if (!im) strcat(lines[l],","); } sexpr { if (!im) strcat(lines[l],")==0) "); }
 ;
 
 oper: EQUAL { strcpy(oper,"=="); }
@@ -479,26 +748,40 @@ oper: EQUAL { strcpy(oper,"=="); }
 	| PE { strcpy(oper,"<="); }
 	;
 
-sexpr: string { if (im) strcpy(cstr, string); }
-	| string PO { if (!im) strcat(lines[l],identifier); strcat(lines[l],"["); } expr PF { strcat(lines[l],"]"); }
+sarg: string { if (im) strcpy(cstr, string); }
+	| string PO { if (!im) {
+		strcat(lines[l], "[");
+	} } expr PF { if (!im) strcat(lines[l],"]"); }
+	| CHARS { if (!im) strcat(lines[l],chars); else { strcpy(string,chars+1);string[strlen(string)-1]=0; } }
+	;
+
+func_args: sarg COMMA { if (!im) strcat(lines[l],","); } expr ;
+func_args3: sarg COMMA { if (!im) strcat(lines[l],","); } expr COMMA { if (!im) strcat(lines[l],","); } expr ;
+
+sexpr: sarg
 	| sexpr PLUS string { if (im) strcat(cstr, identifier); }
-	| MID PO string COMMA expr COMMA expr PF
-	| LEFT PO string COMMA expr PF { if (im)  string[(int)$5]=0; }
-	| RIGHT PO string COMMA expr PF { if (im) string=string+(strlen(string)-(int)$5); }
+	| MID { if (!im) strcat(lines[l],"mid_str("); } PO func_args3 PF { if (im) {} else strcat(lines[l],")"); }
+	| LEFT { if (!im) strcat(lines[l],"left_str("); } PO func_args PF { if (im) {} else strcat(lines[l],")"); }
+	| RIGHT { if (!im) strcat(lines[l],"right_str("); } PO func_args PF { if (im) {} else strcat(lines[l],")"); }
 	| STR PO expr PF { if (im) sprintf(cstr, "%g", $3); }
 	;
 
-multi_expr: { if (!im) strcat(lines[l],"f\","); } expr { if (im) {
+multi_expr: { if (!im) strcat(lines[l],"printf(\"%f\","); } expr { if (im) {
 	  $$=$2;
 	sprintf(cstr, "%f", $2);
+} else
+	strcat(lines[l],")");
 }
-}
-	| { if (!im) strcat(lines[l],"s\","); } sexpr { strcpy(cstr,string); }
-        | { if (!im) strcat(lines[l],"c\","); } CHR PO { if (!im) strcat(lines[l],"(int)"); } expr PF { if (im) sprintf(cstr, "%c", (int)$5); }
+	| { if (!im) strcat(lines[l],"printf(\"%s\","); } sexpr { strcpy(cstr,string);
+	strcat(lines[l],")");
+ }
+        | { if (!im) strcat(lines[l],"printf(\"%c\","); } CHR PO { if (!im) strcat(lines[l],"(int)"); } expr PF { if (im) sprintf(cstr, "%c", (int)$5);
+	strcat(lines[l],")");
+ }
 	| { printf("\n"); }
 	;
 
-opt_print: { if (!im) strcat(lines[l],";printf(\"\\n\")"); }
+opt_print: { if (!im) strcat(lines[l],""); }
  | sep
  | sep  { if (!im) strcat(lines[l],";printf(\"%f\","); } expr { if (!im) strcat(lines[l],")"); }
  | sep sexpr
@@ -560,10 +843,10 @@ expr: expr PLUS { if (!im) strcat(lines[l],"+"); } expr { if (im) $$=$1+$4; }
  }
  | COS PO { if (!im) strcat(lines[l],"cos(");  } expr PF { if (im) $$=cos($4); else strcat(lines[l],")"); }
  | SIN PO { if (!im) strcat(lines[l],"sin(");  } expr PF { if (im) $$=sin($4); else strcat(lines[l],")"); }
- | TAN PO expr PF { if (im) $$=tan($3); }
+ | TAN PO { if (!im) strcat(lines[l],"tan(");  } expr PF { if (im) $$=tan($4); else strcat(lines[l],")"); }
  | SQR PO { if (!im) strcat(lines[l],"sqrt("); } expr PF { if (im) $$=sqrt($4); else strcat(lines[l],")"); }
  | EXP PO expr PF { if (im) $$=exp($3); }
- | MINUS { if (!im) strcat(lines[l],"-"); } expr { if (im) $$=-$3; }
+ | MINUS { if (!im) strcat(lines[l],"-"); } expr %prec UMINUS { if (im) $$=-$3; }
  | ASC PO CHAINE PF
  | RND PO { if (!im) 
 #ifdef WIN32
@@ -573,7 +856,15 @@ strcat(lines[l],"(float)drand48()*");
 #endif
 } expr PF { if (im) $$=(float)drand48(); }
  | INT { if (!im) strcat(lines[l],"roundf("); } PO expr PF { if (im) $$=(int)$4; else strcat(lines[l],")");  }
+ | PEEK PO { if (!im) strcat(lines[l],"peek_func("); } expr PF { if (im) { int addr = (int)$4; if (addr == 49152) { int bytes = 0; ioctl(0, FIONREAD, &bytes); if (bytes > 0) { char c = getchar(); mem[49152] = (char)(c | 0x80); } } $$ = (unsigned char)mem[addr]; if (addr == 49152) { mem[49152] &= ~0x80; } } else { strcat(lines[l], ")"); } }
+ | LEN PO { if (!im) strcat(lines[l],"strlen("); } sarg PF { if (im) $$=strlen(string); else strcat(lines[l],")"); }
 ;
+
+filename: IDENTIFIER { strcpy(a,identifier); }
+	| IDENTIFIER { strcpy(a,identifier); } DOT extension { strcat (a,".bas"); strcpy(identifier,a); };
+
+extension: IDENTIFIER 
+	;
 
 %%
 #include"lex.yy.c"
@@ -586,7 +877,7 @@ else
 	yyparse();
 }
 
-char rcsrev[]="$Revision: 1.21 $";
+char rcsrev[]="$Revision: 1.35 $";
 struct var *r2;
 
 int main(int argc,char * argv[]) {
@@ -598,6 +889,15 @@ while ((ch = getopt(argc,argv,"d")) != -1) {
 	case 'd':
 		yydebug=1;
 		break;
+	}
+}
+
+if (argc>1) {
+	yyin=fopen(argv[1],"r");
+	if (!yyin)
+		fprintf(stderr,"Error opening %s\n",argv[1]);
+	else {
+		yypush_buffer_state(yy_create_buffer(yyin,YY_BUF_SIZE));
 	}
 }
 
@@ -668,14 +968,99 @@ int basic2c(FILE *fp) {
 	fprintf(fp,"#include<stdlib.h>\n");
 	fprintf(fp,"#include<string.h>\n");
 	fprintf(fp,"#include<math.h>\n");
-	//fprintf(fp,"#include<time.h>\n");
+	fprintf(fp,"#include<unistd.h>\n");
+	fprintf(fp,"#include<sys/ioctl.h>\n");
+	fprintf(fp,"#include<termios.h>\n");
+	fprintf(fp,"unsigned char mem[65535];\n");
+	fprintf(fp,"static struct termios orig_t;\n");
+	fprintf(fp,"static int orig_t_saved = 0;\n");
+	fprintf(fp,"static int tty_fd = -1;\n");
+	fprintf(fp,"static void restore_terminal() {\n");
+	fprintf(fp,"    if (orig_t_saved && tty_fd != -1) {\n");
+	fprintf(fp,"        tcsetattr(tty_fd, TCSANOW, &orig_t);\n");
+	fprintf(fp,"    }\n");
+	fprintf(fp,"}\n");
+
+	fprintf(fp,"int peek_func(int addr) {\n");
+	fprintf(fp,"    if (addr == 49152) {\n");
+	fprintf(fp,"        static FILE *tty = NULL;\n");
+	fprintf(fp,"        static int initialized = 0;\n");
+	fprintf(fp,"        if (!tty) {\n");
+	fprintf(fp,"            tty = fopen(\"/dev/tty\", \"r+\");\n");
+	fprintf(fp,"            if (!tty) tty = stdin;\n");
+	fprintf(fp,"        }\n");
+	fprintf(fp,"        tty_fd = fileno(tty);\n");
+	fprintf(fp,"        if (!initialized && isatty(tty_fd)) {\n");
+	fprintf(fp,"            tcgetattr(tty_fd, &orig_t);\n");
+	fprintf(fp,"            orig_t_saved = 1;\n");
+	fprintf(fp,"            atexit(restore_terminal);\n");
+	fprintf(fp,"            struct termios t = orig_t;\n");
+	fprintf(fp,"            t.c_lflag &= ~(ICANON | ECHO);\n");
+	fprintf(fp,"            tcsetattr(tty_fd, TCSANOW, &t);\n");
+	fprintf(fp,"            initialized = 1;\n");
+	fprintf(fp,"        }\n");
+	fprintf(fp,"        int bytes = 0;\n");
+	fprintf(fp,"        ioctl(tty_fd, FIONREAD, &bytes);\n");
+	fprintf(fp,"        if (bytes > 0) {\n");
+	fprintf(fp,"            int c = fgetc(tty);\n");
+	fprintf(fp,"            mem[49152] = (char)(c | 0x80);\n");
+	fprintf(fp,"        }\n");
+	fprintf(fp,"        int val = (unsigned char)mem[addr];\n");
+	fprintf(fp,"        mem[49152] &= ~0x80;\n");
+	fprintf(fp,"        return val;\n");
+	fprintf(fp,"    }\n");
+	fprintf(fp,"    return (unsigned char)mem[addr];\n");
+	fprintf(fp,"}\n");
+
+	fprintf(fp,"char* left_str(const char* s, int n) {\n");
+	fprintf(fp,"    static char buf[1024];\n");
+	fprintf(fp,"    if (!s) return \"\";\n");
+	fprintf(fp,"    int len = strlen(s);\n");
+	fprintf(fp,"    if (n < 0) n = 0;\n");
+	fprintf(fp,"    if (n > len) n = len;\n");
+	fprintf(fp,"    strncpy(buf, s, n);\n");
+	fprintf(fp,"    buf[n] = '\\0';\n");
+	fprintf(fp,"    return buf;\n");
+	fprintf(fp,"}\n");
+
+	fprintf(fp,"char* right_str(const char* s, int n) {\n");
+	fprintf(fp,"    static char buf[1024];\n");
+	fprintf(fp,"    if (!s) return \"\";\n");
+	fprintf(fp,"    int len = strlen(s);\n");
+	fprintf(fp,"    if (n < 0) n = 0;\n");
+	fprintf(fp,"    if (n > len) n = len;\n");
+	fprintf(fp,"    strncpy(buf, s + len - n, n);\n");
+	fprintf(fp,"    buf[n] = '\\0';\n");
+	fprintf(fp,"    return buf;\n");
+	fprintf(fp,"}\n");
+
+	fprintf(fp,"char* mid_str(const char* s, int start, int n) {\n");
+	fprintf(fp,"    static char buf[1024];\n");
+	fprintf(fp,"    if (!s) return \"\";\n");
+	fprintf(fp,"    int len = strlen(s);\n");
+	fprintf(fp,"    if (start < 1) start = 1;\n");
+	fprintf(fp,"    int idx = start - 1;\n");
+	fprintf(fp,"    if (idx > len) idx = len;\n");
+	fprintf(fp,"    if (n < 0) n = 0;\n");
+	fprintf(fp,"    if (idx + n > len) n = len - idx;\n");
+	fprintf(fp,"    strncpy(buf, s + idx, n);\n");
+	fprintf(fp,"    buf[n] = '\\0';\n");
+	fprintf(fp,"    return buf;\n");
+	fprintf(fp,"}\n");
 
 	fprintf(fp,"jmp_buf stack[100]; int sp=0;\n");
 
 	fprintf(fp,"void main(int argc, char * argv[]) {\n");
 	fprintf(fp,"char s[1024];\n");
 
-	fprintf(fp,"float VERSION=%f;\n",r2->values[0]);
+	fprintf(fp,"float data_values[] = {");
+	for(int i=0; i<data_count; i++) {
+		fprintf(fp,"%f%s", data_values[i], (i < data_count - 1) ? "," : "");
+	}
+	fprintf(fp,"};\n");
+	fprintf(fp,"int data_ptr = 0;\n");
+
+	fprintf(fp,"float COLOR=0;\n");
 #ifdef WIN32
 	fprintf(fp,"srand(time(NULL));\n");
 #else

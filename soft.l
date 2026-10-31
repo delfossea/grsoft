@@ -5,8 +5,8 @@
         if (!YY_CURRENT_BUFFER)
 		yyterminate();
 }
+"DEBUG"|"debug" { return DEBUG; }
 "CLEAR"|"clear" { return CLEAR; }
-"COLOR"|"color" { return COLOR; }
 "DRAW"|"draw" { return DRAW; }
 "LIST"|"list"	{ return LIST; }
 "RUN"|"run"	{ return RUN; }
@@ -69,6 +69,12 @@
 "SAVE"|"save" { return SAVE; }
 "LOAD"|"load" { return LOAD; }
 "CALL"|"call" { return CALL; }
+"CATALOG"|"catalog"|"CAT"|"cat" { return CATALOG; }
+"PREFIX"|"prefix" { return PREFIX; }
+"CREATE"|"create" { return CREATE; }
+"DELETE"|"delete"|"DEL"|"del" { return DEL; }
+"STORE"|"store" { return STORE; }
+"RESTORE"|"restore" { return RESTORE; }
 "EXEC"|"exec"	BEGIN(exec);
 <exec>[ \t]*
 <exec>[^ \t\n]+ {
