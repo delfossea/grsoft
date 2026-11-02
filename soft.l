@@ -1,9 +1,8 @@
+%option noyywrap
 %x exec
 %%
 <<EOF>> {
-	yypop_buffer_state();
-        if (!YY_CURRENT_BUFFER)
-		yyterminate();
+    yyterminate();
 }
 "DEBUG"|"debug" { return DEBUG; }
 "CLEAR"|"clear" { return CLEAR; }
@@ -67,6 +66,9 @@
 "GET"|"get" { return GET; }
 "AT"|"at" { return AT; }
 "SAVE"|"save" { return SAVE; }
+"OPEN"|"open" { return OPEN; }
+"CLOSE"|"close" { return CLOSE; }
+"WRITE"|"write" { return WRITE; }
 "LOAD"|"load" { return LOAD; }
 "CALL"|"call" { return CALL; }
 "CATALOG"|"catalog"|"CAT"|"cat" { return CATALOG; }

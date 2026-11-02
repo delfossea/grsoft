@@ -9,6 +9,7 @@
 #include<sys/stat.h>
 #include<sys/types.h>
 #include<sys/ioctl.h>
+#include<ctype.h>
 /*
 int yydebug=1;
 */
@@ -44,6 +45,17 @@ struct var *d;
 struct str *ds;
 struct str * root = NULL;
 struct str *D;
+struct open_file {
+    char name[256];
+    FILE *fp;
+    struct open_file *next;
+};
+struct open_file *open_files = NULL;
+FILE *current_file = NULL;
+FILE *output_file = NULL;
+FILE *input_file = NULL;
+float cond_lhs = 0;
+int execute_actions = 1;
 int c=0;
 float cv;
 int cx,cy;
@@ -97,11 +109,9 @@ char aux[65536];
 char aux1[1024];
 char aux2[1024];
 int im=1;
-int gr=0;
 int l=0;
 int notdef=1;
 extern char * yytext;
-extern void destroy();
 char s[1024];
 int trace=0;
 void yyerror(char *s);
@@ -114,6 +124,98 @@ int plot_len;
 float data_values[4096];
 int data_count = 0;
 int data_ptr = 0;
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+YY_BUFFER_STATE yy_scan_string (const char * yy_str);
+void yy_delete_buffer (YY_BUFFER_STATE b);
+void yy_switch_to_buffer (YY_BUFFER_STATE new_buffer);
+void yy_push_buffer_state (YY_BUFFER_STATE b);
+void yy_pop_buffer_state (void);
+char *soft_readline(const char *prompt);
+void soft_add_history(const char *line);
+
+float eval_cond(float v1, const char* op, float v2) {
+    if (strcmp(op, "==") == 0) return (v1 == v2) ? 1.0 : 0.0;
+    if (strcmp(op, ">") == 0) return (v1 > v2) ? 1.0 : 0.0;
+    if (strcmp(op, "<") == 0) return (v1 < v2) ? 1.0 : 0.0;
+    if (strcmp(op, ">=") == 0) return (v1 >= v2) ? 1.0 : 0.0;
+    if (strcmp(op, "<=") == 0) return (v1 <= v2) ? 1.0 : 0.0;
+    return 0.0;
+}
+
+char* left_str(const char* s, int n) {
+    static char buf[1024];
+    if (!s) return "";
+    int len = strlen(s);
+    if (n < 0) n = 0;
+    if (n > len) n = len;
+    strncpy(buf, s, n);
+    buf[n] = '\0';
+    return buf;
+}
+
+char* right_str(const char* s, int n) {
+    static char buf[1024];
+    if (!s) return "";
+    int len = strlen(s);
+    if (n < 0) n = 0;
+    if (n > len) n = len;
+    strncpy(buf, s + len - n, n);
+    buf[n] = '\0';
+    return buf;
+}
+
+char* mid_str(const char* s, int start, int n) {
+    static char buf[1024];
+    if (!s) return "";
+    int len = strlen(s);
+    if (start < 1) start = 1;
+    int idx = start - 1;
+    if (idx > len) idx = len;
+    if (n < 0) n = 0;
+    if (idx + n > len) n = len - idx;
+    strncpy(buf, s + idx, n);
+    buf[n] = '\0';
+    return buf;
+}
+
+float for_start_val = 0;
+float for_limit_val = 0;
+float for_step_val = 1;
+char for_var_name[80];
+float func_arg1 = 0;
+float func_arg2 = 0;
+
+char file_buffer[65536] = {0};
+
+char *find_matching_next(char *p) {
+    int depth = 1;
+    char *curr = p + 3;
+    while (*curr != '\0' && depth > 0) {
+        if ((curr == file_buffer || !isalpha((unsigned char)curr[-1])) &&
+            strncasecmp(curr, "FOR", 3) == 0 && !isalpha((unsigned char)curr[3])) {
+            depth++;
+            curr += 3;
+        } else if ((curr == file_buffer || !isalpha((unsigned char)curr[-1])) &&
+                   strncasecmp(curr, "NEXT", 4) == 0 && !isalpha((unsigned char)curr[4])) {
+            depth--;
+            if (depth == 0) return curr;
+            curr += 4;
+        } else {
+            curr++;
+        }
+    }
+    return NULL;
+}
+
+struct loop_info {
+    char var_name[80];
+    float limit;
+    float step;
+    char *body_start;
+    char *body_end;
+};
+struct loop_info im_loop_stack[32];
+int im_loop_sp = 0;
 %}
 %token DEL
 %token CREATE
@@ -121,6 +223,9 @@ int data_ptr = 0;
 %token STR
 %token NOTRACE
 %token SAVE
+%token OPEN
+%token CLOSE
+%token WRITE
 %token GET
 %token PEEK
 %token POKE
@@ -219,10 +324,13 @@ int data_ptr = 0;
 %left PLUS MINUS
 %left ASTERISK DIVIDE
 %nonassoc UMINUS
+%left OR
+%left AND
+%nonassoc NOT
 %%
 pgm: 
- | pgm line { if (!gr || !im) printf("]"); } CR
- | pgm CR { if (!gr || !im) printf("]"); }
+ | pgm line CR
+ | pgm CR 
  ;
 
 line: NUMBER { im=0; l=atoi(yytext); strcpy(lines[l],""); } insts { if (!im&&!infor) strcat(lines[l],";"); else infor=0;  }
@@ -234,7 +342,7 @@ insts : inst
 	| { lines[l][0]=0; }
 	;
 
-inst: PRINT multi_expr { if (im) printf("%s\n",cstr); } opt_print { if (!im) strcat(lines[l],";printf(\"\\n\")"); }
+inst: PRINT multi_expr { if (im && execute_actions) fprintf(output_file, "%s\n", cstr); } opt_print { if (!im) strcat(lines[l],";printf(\"\\n\")"); }
 
  | opt_let IDENTIFIER { 
 	notdef=1; 
@@ -277,17 +385,25 @@ inst: PRINT multi_expr { if (im) printf("%s\n",cstr); } opt_print { if (!im) str
 }
 
  
- | opt_let IDENTIFIER PO NUMBER PF EQUAL {
+ | opt_let IDENTIFIER PO {
+	if (!im) {
 		strcat(lines[l], identifier);
-                char buf[32];
-                sprintf(buf, "[%d]=", (int)$4);
-                strcat(lines[l], buf);
+		strcat(lines[l], "[");
+	}
+	strcpy(a, identifier);
 } expr {
-	if(im) {
-		d=r;
-		while (strcmp(d->name,identifier)!=0)
-			d=d->next;
-		d->values[(int)$4]=$8;
+	if (!im) {
+		strcat(lines[l], "]=");
+	}
+} PF EQUAL expr {
+	if (im && execute_actions) {
+		d = r;
+		while (d && strcmp(d->name, a) != 0)
+			d = d->next;
+		if (d) {
+			int idx = (int)$5;
+			d->values[idx] = $9;
+		}
 	}
  }
  | CHAINE { if (im) strcpy(A,yytext); }  EQUAL sexpr { if (im) {
@@ -406,12 +522,53 @@ inst: PRINT multi_expr { if (im) printf("%s\n",cstr); } opt_print { if (!im) str
 	strcat(lines[l],"*/");
 	}
  }
- | IF { if (!im) strcat(lines[l],"if ");} cond opt_then { if (!im) strcat(lines[l],"{"); } inst { if (!im) strcat(lines[l],";}"); }
+ | IF {
+     if (!im) strcat(lines[l],"if ");
+ } cond opt_then {
+     if (im) {
+         execute_actions = ($3 != 0.0);
+     }
+     if (!im) strcat(lines[l],"{");
+ } inst {
+     if (im) {
+         execute_actions = 1;
+     }
+     if (!im) strcat(lines[l],";}");
+ }
  | GOTO { strcat(lines[l],"goto L"); } expr
  | GOSUB { if (!im) strcat(lines[l],"if (!setjmp(stack[sp++])) goto L"); } expr
- | INPUT { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); } IDENTIFIER { if (!im) { strcat(lines[l],identifier);strcat(lines[l],"=atof(s)"); } else fprintf(stderr,"NO DIRECT COMMAND\n"); }
- | INPUT opt_prompt CHAINE { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier); else fprintf(stderr,"NO DIRECT COMMAND\n");  } 
- | INPUT opt_prompt CHAINE PO expr PF { if (!im) sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],identifier,identifier);  else fprintf(stderr,"NO DIRECT COMMAND\n"); } 
+ | INPUT { if (!im) strcat(lines[l],"fgets(s,1024,stdin);float "); } IDENTIFIER opt_index {
+     if (im && execute_actions) {
+         char buf[1024];
+         if (fgets(buf, sizeof(buf), input_file)) {
+             buf[strcspn(buf, "\r\n")] = 0;
+             float val = atof(buf);
+             notdef = 1;
+             d = r;
+             while (d) {
+                 if (strcmp(d->name, identifier) == 0) {
+                     notdef = 0;
+                     d->values[0] = val;
+                     break;
+                 }
+                 d = d->next;
+             }
+             if (notdef) {
+                 d = (struct var*)malloc(sizeof(struct var));
+                 d->values = malloc(sizeof(float));
+                 d->size = 1;
+                 d->values[0] = val;
+                 strcpy(d->name, identifier);
+                 d->next = r;
+                 r = d;
+             }
+         }
+     } else if (!im) {
+         strcat(lines[l],identifier);
+         strcat(lines[l],"=atof(s)");
+     }
+ }
+ | INPUT opt_prompt CHAINE opt_index { if (!im) { String[strlen(String)-1]=0;sprintf(lines[l],"%schar %s[256];fgets(%s,256,stdin)",lines[l],String,String); } else fprintf(stderr,"NO DIRECT COMMAND\n");  } 
  | HTAB {
      if (!im) {
          plot_len = strlen(lines[l]);
@@ -447,9 +604,8 @@ system("cls");
 printf("%c[2J",27);
 #endif
 else strcat (lines[l],"printf(\"%c[2J\",27)");   }
- | TEXT { if (im) { gr=0; } }
+ | TEXT { if (im) { fprintf(stderr,"Already in text mode\n"); } }
  | GR { if (im) {
-	gr=1;
 	printf("%c[2J",27);
 } else {
 	strcat(lines[l],"printf(\"%c[2J\",27);");
@@ -491,11 +647,119 @@ else strcat (lines[l],"printf(\"%c[2J\",27)");   }
  } opt_dims
  | POKE expr COMMA expr { if (im) { mem[(int)$2]=(char)$4; } }
  | GET CHAINE { if (im) fprintf(stderr,"DIRECT ERROR\n"); }
- | FOR { infor = 1; } IDENTIFIER EQUAL { if (!im) {
-sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
- } expr TO { if (!im) strcat(lines[l],";");strcat(lines[l],identifier);strcat(lines[l],"<="); }
- expr { if (!im) strcat(lines[l],";"); strcat(lines[l],identifier);strcat(lines[l],"++){"); }
- | NEXT { if (!im) strcat(lines[l],"}"); } opt_var
+ | FOR { infor = 1; for_step_val = 1.0; } IDENTIFIER EQUAL { 
+     if (!im) {
+         sprintf(lines[l],"%sfor(float %s=", lines[l], identifier); 
+     }
+     strcpy(for_var_name, identifier);
+ } expr TO { 
+     if (!im) {
+         strcat(lines[l],";");
+         strcat(lines[l],identifier);
+         strcat(lines[l],"<=");
+     }
+     for_start_val = $6;
+ } expr {
+     for_limit_val = $9;
+     for_step_val = 1.0;
+ } opt_step { 
+     if (im) {
+         char *for_ptr = file_buffer;
+         while (*for_ptr != '\0') {
+             if (strncasecmp(for_ptr, "FOR", 3) == 0 && !isalpha((unsigned char)for_ptr[3])) {
+                 if (strstr(for_ptr, for_var_name) != NULL) {
+                     break;
+                 }
+             }
+             for_ptr++;
+         }
+         char *next_ptr = find_matching_next(for_ptr);
+         char *body_start = for_ptr;
+         while (*body_start != '\0' && *body_start != '\n' && *body_start != ':') {
+             body_start++;
+         }
+         if (*body_start != '\0') body_start++;
+         
+         notdef = 1;
+         d = r;
+         while (d) {
+             if (strcmp(d->name, for_var_name) == 0) {
+                 notdef = 0;
+                 d->values[0] = for_start_val;
+                 break;
+             }
+             d = d->next;
+         }
+         if (notdef) {
+             d = (struct var*)malloc(sizeof(struct var));
+             d->values = malloc(sizeof(float));
+             d->size = 1;
+             d->values[0] = for_start_val;
+             strcpy(d->name, for_var_name);
+             d->next = r;
+             r = d;
+         }
+         
+         if (next_ptr != NULL) {
+             int body_len = next_ptr - body_start;
+             char *body_str = (char*)malloc(body_len + 1);
+             strncpy(body_str, body_start, body_len);
+             body_str[body_len] = '\0';
+             while (body_len > 0 && (body_str[body_len-1] == ' ' || body_str[body_len-1] == '\t' || body_str[body_len-1] == '\r' || body_str[body_len-1] == '\n' || body_str[body_len-1] == ':')) {
+                 body_str[--body_len] = '\0';
+             }
+             char *p_body = body_str;
+             while (*p_body == ' ' || *p_body == '\t') p_body++;
+             
+             while (1) {
+                 float cur_val = for_start_val;
+                 d = r;
+                 while (d) {
+                     if (strcmp(d->name, for_var_name) == 0) {
+                         cur_val = d->values[0];
+                         break;
+                     }
+                     d = d->next;
+                 }
+                 int continue_loop = (for_step_val >= 0) ? (cur_val <= for_limit_val) : (cur_val >= for_limit_val);
+                 if (!continue_loop) break;
+              
+                 int b_len = strlen(p_body);
+                 char *body_line = (char*)malloc(b_len + 2);
+                 strcpy(body_line, p_body);
+                 body_line[b_len] = '\n';
+                 body_line[b_len+1] = '\0';
+
+                 YY_BUFFER_STATE b = yy_scan_string(body_line);
+                 yyparse();
+                 yy_delete_buffer(b);
+                 free(body_line);
+                 
+                 d = r;
+                 while (d) {
+                     if (strcmp(d->name, for_var_name) == 0) {
+                         d->values[0] += for_step_val;
+                         break;
+                     }
+                     d = d->next;
+                 }
+             }
+             free(body_str);
+             yy_switch_to_buffer(yy_scan_string(next_ptr + 4));
+         }
+     } else {
+         strcat(lines[l],";");
+         strcat(lines[l],identifier);
+         strcat(lines[l],"++){");
+     }
+ }
+ | NEXT { 
+     if (!im) {
+         strcat(lines[l],"}"); 
+     } else {
+         infor = 0;
+     }
+ } opt_var
  | DATA {
      if (!im) {
          plot_len = strlen(lines[l]);
@@ -506,60 +770,124 @@ sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
          strcat(lines[l], "/* DATA */");
      }
  }
- | READ IDENTIFIER {
-     struct var *v;
-     int found = 0;
+/*
+ | READ { if (!im) strcat(lines[l],""); } filename {
      if (im) {
-         struct var *d = r;
-         while(d) {
-             if (strcmp(d->name, identifier) == 0) {
-                 found = 1;
+         struct open_file *of = open_files;
+         FILE *fp = NULL;
+         while (of) {
+             if (strcmp(of->name, identifier) == 0) {
+                 fp = of->fp;
+                 break;
+             }
+             of = of->next;
+         }
+         if (!fp) {
+             fp = fopen(identifier, "r");
+             if (fp) {
+                 struct open_file *new_of = (struct open_file*)malloc(sizeof(struct open_file));
+                 strcpy(new_of->name, identifier);
+                 new_of->fp = fp;
+                 new_of->next = open_files;
+                 open_files = new_of;
+             }
+         }
+         if (fp) {
+             input_file = fp;
+             current_file = fp;
+         } else {
+             fprintf(stderr, "I/O ERROR\n");
+         }
+     } else {
+	strcat(lines[l],"");
+  }
+ }
+*/
+// | READ {
+//     if (im) {
+//         if (current_file) input_file = current_file;
+//     }
+// }
+ | READ IDENTIFIER {
+     struct open_file *of = open_files;
+     int is_file = 0;
+     while (of) {
+         if (strcmp(of->name, identifier) == 0) {
+             is_file = 1;
+             input_file = of->fp;
+             current_file = of->fp;
+             break;
+         }
+         of = of->next;
+     }
+     if (!is_file && im) {
+         FILE *fp = fopen(identifier, "r");
+         if (fp) {
+             struct open_file *new_of = (struct open_file*)malloc(sizeof(struct open_file));
+             strcpy(new_of->name, identifier);
+             new_of->fp = fp;
+             new_of->next = open_files;
+             open_files = new_of;
+             input_file = fp;
+             current_file = fp;
+             is_file = 1;
+         }
+     }
+     if (!is_file) {
+         struct var *v;
+         int found = 0;
+         if (im) {
+             struct var *d = r;
+             while(d) {
+                 if (strcmp(d->name, identifier) == 0) {
+                     found = 1;
+                     if (data_ptr < data_count) {
+                         d->values[0] = data_values[data_ptr++];
+                     } else {
+                         fprintf(stderr, "OUT OF DATA ERROR\n");
+                     }
+                     break;
+                 }
+                 d = d->next;
+             }
+             if (!found) {
+                 d = (struct var*)malloc(sizeof(struct var));
+                 strcpy(d->name, identifier);
+                 d->values = malloc(sizeof(float));
+                 d->size = 1;
                  if (data_ptr < data_count) {
                      d->values[0] = data_values[data_ptr++];
                  } else {
+                     d->values[0] = 0;
                      fprintf(stderr, "OUT OF DATA ERROR\n");
                  }
-                 break;
+                 d->next = r;
+                 r = d;
              }
-             d = d->next;
-         }
-         if (!found) {
-             d = (struct var*)malloc(sizeof(struct var));
-             strcpy(d->name, identifier);
-             d->values = malloc(sizeof(float));
-             d->size = 1;
-             if (data_ptr < data_count) {
-                 d->values[0] = data_values[data_ptr++];
-             } else {
+         } else {
+             notdef = 1;
+             struct var *d = r;
+             while(d) {
+                 if (strcmp(d->name, identifier) == 0) {
+                     notdef = 0;
+                     break;
+                 }
+                 d = d->next;
+             }
+             if (notdef) {
+                 strcat(lines[l], "float ");
+                 d = (struct var*)malloc(sizeof(struct var));
+                 d->values = malloc(sizeof(float));
+                 d->size = 1;
                  d->values[0] = 0;
-                 fprintf(stderr, "OUT OF DATA ERROR\n");
+                 strcpy(d->name, identifier);
+                 d->next = r;
+                 r = d;
              }
-             d->next = r;
-             r = d;
+             char buf[256];
+             sprintf(buf, "%s=data_values[data_ptr++]", identifier);
+             strcat(lines[l], buf);
          }
-     } else {
-         notdef = 1;
-         struct var *d = r;
-         while(d) {
-             if (strcmp(d->name, identifier) == 0) {
-                 notdef = 0;
-                 break;
-             }
-             d = d->next;
-         }
-         if (notdef) {
-             strcat(lines[l], "float ");
-             d = (struct var*)malloc(sizeof(struct var));
-             d->values = malloc(sizeof(float));
-             d->size = 1;
-             d->values[0] = 0;
-             strcpy(d->name, identifier);
-             d->next = r;
-             r = d;
-         }
-         char buf[256];
-         sprintf(buf, "%s=data_values[data_ptr++]", identifier);
-         strcat(lines[l], buf);
      }
  }
  | RETURN { if (!im) strcat(lines[l],"longjmp(stack[--sp],1)"); }
@@ -644,6 +972,107 @@ sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
 		}
  }
  }
+ | OPEN {
+	strcat(lines[l],"stdout=fopen(\"");
+} filename {
+     if (im) {
+         FILE *fp = fopen(identifier, "r+");
+         if (!fp) {
+             fp = fopen(identifier, "w+");
+         }
+         if (!fp) {
+             fprintf(stderr, "I/O ERROR\n");
+         } else {
+             struct open_file *of = (struct open_file*)malloc(sizeof(struct open_file));
+             strcpy(of->name, identifier);
+             of->fp = fp;
+             of->next = open_files;
+             open_files = of;
+             current_file = fp;
+         }
+     } else {
+	strcat(lines[l],"\",\"a\")");
+  }
+ }
+ | CLOSE {
+     if (im) {
+         struct open_file *of = open_files;
+         while (of) {
+             if (of->fp && of->fp != stdin && of->fp != stdout) {
+                 if (of->fp == output_file) output_file = stdout;
+                 if (of->fp == input_file) input_file = stdin;
+                 fclose(of->fp);
+             }
+             struct open_file *next = of->next;
+             free(of);
+             of = next;
+         }
+         open_files = NULL;
+         current_file = NULL;
+         output_file = stdout;
+         input_file = stdin;
+     }
+ }
+ | CLOSE filename {
+     if (im) {
+         struct open_file *of = open_files;
+         struct open_file *prev = NULL;
+         while (of) {
+             if (strcmp(of->name, identifier) == 0) {
+                 if (of->fp && of->fp != stdin && of->fp != stdout) {
+                     if (of->fp == output_file) output_file = stdout;
+                     if (of->fp == input_file) input_file = stdin;
+                     fclose(of->fp);
+                 }
+                 if (prev) prev->next = of->next;
+                 else open_files = of->next;
+                 if (current_file == of->fp) current_file = NULL;
+                 free(of);
+                 break;
+             }
+             prev = of;
+             of = of->next;
+         }
+     }
+ }
+ | WRITE { 
+	if (!im) strcat(lines[l],"/*");
+} filename {
+     if (im) {
+         struct open_file *of = open_files;
+         FILE *fp = NULL;
+         while (of) {
+             if (strcmp(of->name, identifier) == 0) {
+                 fp = of->fp;
+                 break;
+             }
+             of = of->next;
+         }
+         if (!fp) {
+             fp = fopen(identifier, "w");
+             if (fp) {
+                 struct open_file *new_of = (struct open_file*)malloc(sizeof(struct open_file));
+                 strcpy(new_of->name, identifier);
+                 new_of->fp = fp;
+                 new_of->next = open_files;
+                 open_files = new_of;
+             }
+         }
+         if (fp) {
+             output_file = fp;
+             current_file = fp;
+         } else {
+             fprintf(stderr, "I/O ERROR\n");
+         }
+     } else {
+	if (!im) strcat(lines[l],"*/");
+  }
+ }
+ | WRITE {
+     if (im) {
+         if (current_file) output_file = current_file;
+     }
+ }
  | LOAD filename {
      if (im) {
          FILE *fp;
@@ -697,10 +1126,38 @@ sprintf(lines[l],"%sfor(float %s=", lines[l], identifier);  }
  }
  | STORE IDENTIFIER { fprintf(stderr,"unimp.\n"); }
  | RESTORE IDENTIFIER { fprintf(stderr,"unimp.\n"); }
- | NEW { for(int i=0;i<65536;i++) strcpy(lines[i],""); data_count=0; data_ptr=0; }
+ | NEW { for(int i=0;i<65536;i++) strcpy(lines[i],""); data_count=0; data_ptr=0; 
+     struct open_file *of = open_files;
+     while (of) {
+         if (of->fp && of->fp != stdin && of->fp != stdout) fclose(of->fp);
+         struct open_file *next = of->next;
+         free(of);
+         of = next;
+     }
+     open_files = NULL;
+     current_file = NULL;
+     output_file = stdout;
+     input_file = stdin;
+ }
  | DRAW expr AT expr COMMA expr
- | CLEAR { if (im) { r=NULL; root=NULL; data_ptr=0; } }
+ | CLEAR { if (im) { r=NULL; root=NULL; data_ptr=0; 
+     struct open_file *of = open_files;
+     while (of) {
+         if (of->fp && of->fp != stdin && of->fp != stdout) fclose(of->fp);
+         struct open_file *next = of->next;
+         free(of);
+         of = next;
+     }
+     open_files = NULL;
+     current_file = NULL;
+     output_file = stdout;
+     input_file = stdin;
+ } }
  ;
+
+opt_index:
+	| PO expr PF
+	;
 
 opt_dim :
 	;
@@ -725,6 +1182,10 @@ opt_var:
 	| IDENTIFIER
 	;
 
+opt_step:
+	| STEP expr { for_step_val = $2; }
+	;
+
 list: expr {
     data_values[data_count++] = $1;
 }
@@ -733,12 +1194,31 @@ list: expr {
 }
 ;
 
-cond: { strcat(lines[l]," ( "); } expr oper { strcat(lines[l],oper); } expr { strcat(lines[l]," ) "); }
-	| PEEK PO expr PF
-	| PO cond PF
-	| cond OR cond
- 	| NOT cond
-	| { if (!im) strcat(lines[l],"(strcmp("); } sexpr EQUAL { if (!im) strcat(lines[l],","); } sexpr { if (!im) strcat(lines[l],")==0) "); }
+cond: { if (!im) strcat(lines[l]," ( "); } expr { if (im) cond_lhs = $2; } oper { if (!im) strcat(lines[l],oper); } expr {
+    if (im) {
+        $$ = eval_cond(cond_lhs, oper, $6);
+    } else {
+        strcat(lines[l]," ) ");
+        $$ = 0;
+    }
+}
+	| PO cond PF { if (im) $$ = $2; }
+	| cond OR { if (!im) strcat(lines[l]," || "); } cond { if (im) $$ = ($1 != 0.0 || $4 != 0.0) ? 1.0 : 0.0; }
+	| cond AND { if (!im) strcat(lines[l]," && "); } cond { if (im) $$ = ($1 != 0.0 && $4 != 0.0) ? 1.0 : 0.0; }
+ 	| NOT { if (!im) strcat(lines[l],"!"); } cond { if (im) $$ = ($2 == 0.0) ? 1.0 : 0.0; }
+	| sexpr {
+        if (im) strcpy(aux1, cstr);
+        if (!im) strcat(lines[l], "(strcmp(");
+    } EQUAL {
+        if (!im) strcat(lines[l], ",");
+    } sexpr {
+        if (im) {
+            $$ = (strcmp(aux1, cstr) == 0) ? 1.0 : 0.0;
+        }
+        if (!im) {
+            strcat(lines[l], ")==0) ");
+        }
+    }
 ;
 
 oper: EQUAL { strcpy(oper,"=="); }
@@ -752,17 +1232,34 @@ sarg: string { if (im) strcpy(cstr, string); }
 	| string PO { if (!im) {
 		strcat(lines[l], "[");
 	} } expr PF { if (!im) strcat(lines[l],"]"); }
-	| CHARS { if (!im) strcat(lines[l],chars); else { strcpy(string,chars+1);string[strlen(string)-1]=0; } }
 	;
 
-func_args: sarg COMMA { if (!im) strcat(lines[l],","); } expr ;
-func_args3: sarg COMMA { if (!im) strcat(lines[l],","); } expr COMMA { if (!im) strcat(lines[l],","); } expr ;
+func_args: sarg COMMA { if (!im) strcat(lines[l],","); } expr { if (im) func_arg1 = $4; } ;
+func_args3: sarg COMMA { if (!im) strcat(lines[l],","); } expr { if (im) func_arg1 = $4; } COMMA { if (!im) strcat(lines[l],","); } expr { if (im) func_arg2 = $8; } ;
 
 sexpr: sarg
 	| sexpr PLUS string { if (im) strcat(cstr, identifier); }
-	| MID { if (!im) strcat(lines[l],"mid_str("); } PO func_args3 PF { if (im) {} else strcat(lines[l],")"); }
-	| LEFT { if (!im) strcat(lines[l],"left_str("); } PO func_args PF { if (im) {} else strcat(lines[l],")"); }
-	| RIGHT { if (!im) strcat(lines[l],"right_str("); } PO func_args PF { if (im) {} else strcat(lines[l],")"); }
+	| MID { if (!im) strcat(lines[l],"mid_str("); } PO func_args3 PF { 
+		if (im) { 
+			strcpy(cstr, mid_str(cstr, (int)func_arg1, (int)func_arg2)); 
+		} else { 
+			strcat(lines[l],")"); 
+		} 
+	}
+	| LEFT { if (!im) strcat(lines[l],"left_str("); } PO func_args PF { 
+		if (im) { 
+			strcpy(cstr, left_str(cstr, (int)func_arg1)); 
+		} else { 
+			strcat(lines[l],")"); 
+		} 
+	}
+	| RIGHT { if (!im) strcat(lines[l],"right_str("); } PO func_args PF { 
+		if (im) { 
+			strcpy(cstr, right_str(cstr, (int)func_arg1)); 
+		} else { 
+			strcat(lines[l],")"); 
+		} 
+	}
 	| STR PO expr PF { if (im) sprintf(cstr, "%g", $3); }
 	;
 
@@ -772,7 +1269,7 @@ multi_expr: { if (!im) strcat(lines[l],"printf(\"%f\","); } expr { if (im) {
 } else
 	strcat(lines[l],")");
 }
-	| { if (!im) strcat(lines[l],"printf(\"%s\","); } sexpr { strcpy(cstr,string);
+	| { if (!im) strcat(lines[l],"printf(\"%s\","); } sexpr { /* strcpy(cstr,string); */
 	strcat(lines[l],")");
  }
         | { if (!im) strcat(lines[l],"printf(\"%c\","); } CHR PO { if (!im) strcat(lines[l],"(int)"); } expr PF { if (im) sprintf(cstr, "%c", (int)$5);
@@ -794,7 +1291,7 @@ sep: COMMA
  ;
 
 string: CHAINE { if (im) strcpy(identifier,yytext); else { yytext[strlen(yytext)-1]=0;strcat(lines[l],yytext); } }
-        | CHARS { if (!im) strcat(lines[l],chars); else { strcpy(string,chars+1);string[strlen(string)-1]=0; } }
+        | CHARS { if (!im) strcat(lines[l],chars); else { strcpy(string,chars+1);string[strlen(string)-1]=0;strcpy(cstr,string); } }
         ;
 
 expr: expr PLUS { if (!im) strcat(lines[l],"+"); } expr { if (im) $$=$1+$4; }
@@ -845,9 +1342,9 @@ expr: expr PLUS { if (!im) strcat(lines[l],"+"); } expr { if (im) $$=$1+$4; }
  | SIN PO { if (!im) strcat(lines[l],"sin(");  } expr PF { if (im) $$=sin($4); else strcat(lines[l],")"); }
  | TAN PO { if (!im) strcat(lines[l],"tan(");  } expr PF { if (im) $$=tan($4); else strcat(lines[l],")"); }
  | SQR PO { if (!im) strcat(lines[l],"sqrt("); } expr PF { if (im) $$=sqrt($4); else strcat(lines[l],")"); }
- | EXP PO expr PF { if (im) $$=exp($3); }
+ | EXP PO { if (!im) strcat(lines[l],"exp(");  } expr PF { if (im) $$=exp($3); else strcat(lines[l],")"); }
  | MINUS { if (!im) strcat(lines[l],"-"); } expr %prec UMINUS { if (im) $$=-$3; }
- | ASC PO CHAINE PF
+ | ASC { if (!im) strcat(lines[l],"(float)*"); } PO sexpr PF { if (im) $$=$3; }
  | RND PO { if (!im) 
 #ifdef WIN32
 strcat(lines[l],"(float)rand()/RAND_MAX");
@@ -860,7 +1357,7 @@ strcat(lines[l],"(float)drand48()*");
  | LEN PO { if (!im) strcat(lines[l],"strlen("); } sarg PF { if (im) $$=strlen(string); else strcat(lines[l],")"); }
 ;
 
-filename: IDENTIFIER { strcpy(a,identifier); }
+filename: IDENTIFIER { if (im) strcpy(a,identifier); else strcat(lines[l],identifier); }
 	| IDENTIFIER { strcpy(a,identifier); } DOT extension { strcat (a,".bas"); strcpy(identifier,a); };
 
 extension: IDENTIFIER 
@@ -870,14 +1367,14 @@ extension: IDENTIFIER
 #include"lex.yy.c"
 void  yyerror(char *s) {
 if (im) 
-	fprintf(stderr,"%s on %s at %d\n",s,yytname[yychar-255],ll);
+	fprintf(stderr,"%s on %s (text: %s) at %d\n",s,yytname[yychar-255],yytext,ll);
 else
-	fprintf(stderr,"%s on %s line %d\n",s,yytname[yychar-255],l);
+	fprintf(stderr,"%s on %s (text: %s) line %d\n",s,yytname[yychar-255],yytext,l);
 	printf(PROMPT);
 	yyparse();
 }
 
-char rcsrev[]="$Revision: 1.35 $";
+char rcsrev[]="$Revision: 1.46 $";
 struct var *r2;
 
 int main(int argc,char * argv[]) {
@@ -894,13 +1391,15 @@ while ((ch = getopt(argc,argv,"d")) != -1) {
 
 if (argc>1) {
 	yyin=fopen(argv[1],"r");
-	if (!yyin)
+	if (!yyin) {
 		fprintf(stderr,"Error opening %s\n",argv[1]);
-	else {
-		yypush_buffer_state(yy_create_buffer(yyin,YY_BUF_SIZE));
+        exit(1);
 	}
 }
+if (!yyin) yyin = stdin;
 
+if (!output_file) output_file = stdout;
+if (!input_file) input_file = stdin;
 srand48(time(NULL));
 strtok(rcsrev,".");
 r=(struct var*)malloc(sizeof(struct var));
@@ -920,9 +1419,58 @@ srand(12345);
 #else
 srand48(12345);
 #endif
-printf(PROMPT);
-yyparse();
-fprintf(stderr,"FIN\n");
+
+if (!isatty(fileno(yyin))) {
+    int len = 0;
+    int c_ch;
+    while ((c_ch = fgetc(yyin)) != EOF && len < 65535) {
+        file_buffer[len++] = (char)c_ch;
+    }
+    file_buffer[len] = '\0';
+    if (yyin != stdin) fclose(yyin);
+
+    if (!output_file) output_file = stdout;
+    if (!input_file) input_file = stdin;
+    srand48(time(NULL));
+    strtok(rcsrev,".");
+    r=(struct var*)malloc(sizeof(struct var));
+    strcpy(r->name,"COLOR");
+    r->values=malloc(sizeof(float));
+    r->size=1;
+    r->values[0]=2;
+    r2=(struct var*)malloc(sizeof(struct var));
+    r->next=r2;
+    r2->values=malloc(sizeof(float));
+    r2->size=1;
+    r2->values[0]=1;
+    r2->next=NULL;
+    strcpy(r2->name,"VERSION");
+    srand48(12345);
+
+    yy_scan_string(file_buffer);
+    yyparse();
+    fprintf(stderr,"FIN\n");
+    exit(0);
+}
+
+    char *line;
+    char buf[4096];
+    while (1) {
+        line = soft_readline(PROMPT);
+        if (!line) break;
+        if (line[0] != '\0') {
+            soft_add_history(line);
+            int len = strlen(line);
+            if (len < sizeof(buf) - 2) {
+                snprintf(buf, sizeof(buf), "%s\n", line);
+                YY_BUFFER_STATE b = yy_scan_string(buf);
+                yyparse();
+                yy_delete_buffer(b);
+            }
+        }
+        free(line);
+    }
+    fprintf(stderr,"FIN\n");
 }
 
 int WinMain() {
@@ -944,17 +1492,6 @@ srand(12345);
 printf(PROMPT);
 fflush(stdout);
 return yyparse();
-}
-
-int yywrap() {
-    yypop_buffer_state();
-    
-    /* Si YY_CURRENT_BUFFER est NULL, la pile est vide (fin globale) */
-    if (!YY_CURRENT_BUFFER) {
-        return 1; /* 1 = arrêt de l'analyse lexicale */
-    }
-    
-    return 0; /* 0 = continuer l'analyse avec le buffer dépilé */
 }
 
 int process(char *s) {
@@ -1076,12 +1613,3 @@ int basic2c(FILE *fp) {
 	fprintf(fp,"}\n");
 	return 0;
 }
-
-void destroy() {
-//	gtk_main_quit();
-}
-/*
-GTypeInstance* g_type_check_instance_cast(GTypeInstance *i,GType iface) {
-return i;
-}
-*/
