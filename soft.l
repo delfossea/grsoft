@@ -77,6 +77,7 @@
 "DELETE"|"delete"|"DEL"|"del" { return DEL; }
 "STORE"|"store" { return STORE; }
 "RESTORE"|"restore" { return RESTORE; }
+"MOD"|"mod" { return MOD; }
 "EXEC"|"exec"	BEGIN(exec);
 <exec>[ \t]*
 <exec>[^ \t\n]+ {
@@ -105,7 +106,6 @@
 ">=" { return GE; }
 "<=" { return PE; }
 "<>" { return DIFF; }
-"%" { return MOD; }
 "-" { return MINUS; }
 "+" { return PLUS; }
 "*" { return ASTERISK; }
