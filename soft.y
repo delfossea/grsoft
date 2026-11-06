@@ -1,6 +1,5 @@
 %{
 #include<stdio.h>
-#include<locale.h>
 #include<string.h>
 #include<stdlib.h>
 #include<math.h>
@@ -16,6 +15,7 @@ int yydebug=1;
 #define YYDEBUG 1
 #define YYSTYPE float
 #define PROMPT "]"
+int dos=0;
 int ll=0;
 char identifier[256];
 char a[512];
@@ -136,6 +136,7 @@ char oper[4];
 char ext[40];
 int infor=0;
 int color=2;
+int bcolor=0;
 int plot_len;
 float data_values[4096];
 int data_count = 0;
@@ -148,6 +149,8 @@ void yy_push_buffer_state (YY_BUFFER_STATE b);
 void yy_pop_buffer_state (void);
 char *soft_readline(const char *prompt);
 void soft_add_history(const char *line);
+int p[512][512];
+
 
 float eval_cond(float v1, const char* op, float v2) {
     if (strcmp(op, "==") == 0) return (v1 == v2) ? 1.0 : 0.0;
@@ -361,6 +364,8 @@ insts : inst
 inst: PRINT multi_expr {
     if (im && execute_actions) {
         fprintf(output_file, "%s", cstr);
+        if (cstr[0]==4) 
+            fprintf(stderr,"DOS\n");
     }
 } opt_print {
     if (im && execute_actions) {
@@ -633,7 +638,7 @@ if (strcmp(chars,""))
 	else strcat (lines[l],"printf(\"%c[2J\",27)");   }
 	 | TEXT { if (im) { fprintf(stderr,"Already in text mode\n"); } }
 	 | GR { if (im) {
-		printf("%c[2J",27);
+		printf("%c[40m,%c[2J",27,27);
 	} else {
 		strcat(lines[l],"printf(\"%c[2J\",27);");
 	}}
@@ -897,14 +902,19 @@ if (strcmp(chars,""))
 	     }
 	 } COMMA expr {
 	     if (im) {
-		 if ( (int)$3%2)
-			 printf("%c[4%dm%c[%d;%dH\u2580",27,color,27,(int)$6,(int)($3/2));
-		 else
-			 printf("%c[4%dm%c[%d;%dH\u2584",27,color,27,(int)$6,(int)($3/2));
+		if ( (int)$6 % 2) {
+		 bcolor=p[(int)$6+1][(int)$3];
+	         printf("%c[4%dm%c[3%dm%c[%d;%dH\u2580",27,bcolor,27,color,27,(int)(($6+1)/2),(int)$3);
+               } else {
+		 bcolor=p[(int)$6-1][(int)$3];
+	         printf("%c[4%dm%c[3%dm%c[%d;%dH\u2584",27,bcolor,27,color,27,(int)(($6+1)/2),(int)$3);
+		}
+		p[(int)$6][(int)$3]=color;
 	     } else {
 	         char y_code[512];
 	         strcpy(y_code, lines[l] + plot_len);
-	         sprintf(lines[l] + plot_len, "printf(\"%%c[4%%dm%%c[%%d;%%dH \",27,(int)COLOR,27,(int)(%s),(int)(%s))", y_code, aux1);
+	         lines[l][plot_len] = '\0';
+	         sprintf(lines[l] + plot_len, "{int _x=(int)(%s); int _y=(int)(%s); int _col=(int)COLOR; if(_y %% 2){ bcolor=p[_y+1][_x]; printf(\"%%c[4%%dm%%c[3%%dm%%c[%%d;%%dH\\u2580\",27,bcolor,27,_col,27,(_y+1)/2,_x); } else { bcolor=p[_y-1][_x]; printf(\"%%c[4%%dm%%c[3%%dm%%c[%%d;%%dH\\u2584\",27,bcolor,27,_col,27,(_y+1)/2,_x); } p[_y][_x]=_col;}", aux1, y_code);
 	     }
 	 }
 	 | HPLOT { fprintf(stderr,"USE GRSOFT\n"); }  expr COMMA expr
@@ -924,12 +934,22 @@ if (strcmp(chars,""))
 	     }
 	 } AT expr {
 	     if (im) {
-	         for(int p=(int)$3; p<=(int)$6; p++)
-	             printf("%c[4%dm%c[%d;%dH ",27,color,27,(int)$9,p);
+	         for(int _x=(int)$3; _x<=(int)$6; _x++) {
+	             int _y = (int)$9;
+	             if (_y % 2) {
+	                 bcolor = p[_y+1][_x];
+	                 printf("%c[4%dm%c[3%dm%c[%d;%dH\u2580", 27, bcolor, 27, color, 27, (_y+1)/2, _x);
+	             } else {
+	                 bcolor = p[_y-1][_x];
+	                 printf("%c[4%dm%c[3%dm%c[%d;%dH\u2584", 27, bcolor, 27, color, 27, (_y+1)/2, _x);
+	             }
+	             p[_y][_x] = color;
+	         }
 	     } else {
 	         char y_code[512];
 	         strcpy(y_code, lines[l] + plot_len);
-	         sprintf(lines[l] + plot_len, "for(int p=(int)(%s); p<=(int)(%s); p++) printf(\"%%c[4%%dm%%c[%%d;%%dH \",27,(int)COLOR,27,(int)(%s),p)", aux1, aux2, y_code);
+	         lines[l][plot_len] = '\0';
+	         sprintf(lines[l] + plot_len, "{int _x1=(int)(%s); int _x2=(int)(%s); int _y=(int)(%s); int _col=(int)COLOR; for(int _x=_x1; _x<=_x2; _x++){ if(_y %% 2){ bcolor=p[_y+1][_x]; printf(\"%%c[4%%dm%%c[3%%dm%%c[%%d;%%dH\\u2580\",27,bcolor,27,_col,27,(_y+1)/2,_x); } else { bcolor=p[_y-1][_x]; printf(\"%%c[4%%dm%%c[3%%dm%%c[%%d;%%dH\\u2584\",27,bcolor,27,_col,27,(_y+1)/2,_x); } p[_y][_x]=_col; }}", aux1, aux2, y_code);
 	     }
 	 }
 	 | VLIN {
@@ -948,12 +968,22 @@ if (strcmp(chars,""))
 	     }
 	 } AT expr {
 	     if (im) {
-	         for(int p=(int)$3; p<=(int)$6; p++)
-	             printf("%c[4%dm%c[%d;%dH ",27,color,27,p,(int)$9);
+	         for(int _y=(int)$3; _y<=(int)$6; _y++) {
+	             int _x = (int)$9;
+	             if (_y % 2) {
+	                 bcolor = p[_y+1][_x];
+	                 printf("%c[4%dm%c[3%dm%c[%d;%dH\u2580", 27, bcolor, 27, color, 27, (_y+1)/2, _x);
+	             } else {
+	                 bcolor = p[_y-1][_x];
+	                 printf("%c[4%dm%c[3%dm%c[%d;%dH\u2584", 27, bcolor, 27, color, 27, (_y+1)/2, _x);
+	             }
+	             p[_y][_x] = color;
+	         }
 	     } else {
 	         char y_code[512];
 	         strcpy(y_code, lines[l] + plot_len);
-	         sprintf(lines[l] + plot_len, "for(int p=(int)(%s); p<=(int)(%s); p++) printf(\"%%c[4%%dm%%c[%%d;%%dH \",27,(int)COLOR,27,p,(int)(%s))", aux1, aux2, y_code);
+	         lines[l][plot_len] = '\0';
+	         sprintf(lines[l] + plot_len, "{int _y1=(int)(%s); int _y2=(int)(%s); int _x=(int)(%s); int _col=(int)COLOR; for(int _y=_y1; _y<=_y2; _y++){ if(_y %% 2){ bcolor=p[_y+1][_x]; printf(\"%%c[4%%dm%%c[3%%dm%%c[%%d;%%dH\\u2580\",27,bcolor,27,_col,27,(_y+1)/2,_x); } else { bcolor=p[_y-1][_x]; printf(\"%%c[4%%dm%%c[3%%dm%%c[%%d;%%dH\\u2584\",27,bcolor,27,_col,27,(_y+1)/2,_x); } p[_y][_x]=_col; }}", aux1, aux2, y_code);
 	     }
 	 }
 	 | SAVE filename {
@@ -1198,7 +1228,7 @@ if (strcmp(chars,""))
 	}
 	;
 
-	cond: { if (!im) strcat(lines[l]," ( "); } expr { if (im) cond_lhs = $2; } oper { if (!im) strcat(lines[l],oper); } expr {
+	cond: { if (!im) strcat(lines[l]," ( (int)"); } expr { if (im) cond_lhs = $2; } oper { if (!im) strcat(lines[l],oper); } expr {
 	    if (im) {
 	        $$ = eval_cond(cond_lhs, oper, $6);
 	    } else {
@@ -1275,7 +1305,11 @@ if (strcmp(chars,""))
 		strcat(lines[l],")");
 	}
 		| { if (!im) strcat(lines[l],"printf(\"%s\","); } sexpr { /* strcpy(cstr,string); */
-		strcat(lines[l],")");
+		if (!im) {
+                    strcat(lines[l],")");
+                    if (strcmp(string,"D$")==0)
+		        dos=1;
+		}
 	 }
 	        | { if (!im) strcat(lines[l],"printf(\"%c\","); } CHR PO { if (!im) strcat(lines[l],"(int)"); } expr PF { if (im) sprintf(cstr, "%c", (int)$5);
 		strcat(lines[l],")");
@@ -1414,7 +1448,7 @@ if (strcmp(chars,""))
 		yyparse();
 	}
 
-	char rcsrev[]="$Revision: 1.67 $";
+	char rcsrev[]="$Revision: 1.68 $";
 	struct var *r2;
 
 	int main(int argc,char * argv[]) {
@@ -1437,6 +1471,12 @@ if (strcmp(chars,""))
 		}
 	}
 	if (!yyin) yyin = stdin;
+
+        struct winsize w;
+        ioctl(0,TIOCGWINSZ,&w);
+
+        int lines=w.ws_row;
+        int cols=w.ws_col;
 
 	if (!output_file) output_file = stdout;
 	if (!input_file) input_file = stdin;
@@ -1503,8 +1543,6 @@ if (strcmp(chars,""))
 
 	    char *line;
 	    char buf[4096];
-	    setlocale(LC_ALL,"");
-
 	    while (1) {
 	        line = soft_readline(PROMPT);
 	        if (!line) break;
@@ -1664,6 +1702,8 @@ if (strcmp(chars,""))
 		fprintf(fp,"int data_ptr = 0;\n");
 
 		fprintf(fp,"float COLOR=0;\n");
+		fprintf(fp,"int p[512][512] = {0};\n");
+		fprintf(fp,"int bcolor = 0;\n");
 	#ifdef WIN32
 		fprintf(fp,"srand(time(NULL));\n");
 	#else
